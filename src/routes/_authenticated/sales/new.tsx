@@ -82,11 +82,12 @@ function NewSale() {
       if (lines.length === 0) throw new Error("لا توجد أصناف");
       const { data: userRes } = await supabase.auth.getUser();
       const uid = userRes.user?.id;
+      if (!uid) throw new Error("يجب تسجيل الدخول");
       const acc = settings.accounts.find((a) => a.id === accountId);
       const finalNotes = acc ? encodeNotes(acc.name, notes) : notes;
       const { data: sale, error: e1 } = await supabase.from("sales").insert({
         customer_id: customerId || null,
-        discount, paid, notes: finalNotes || null, created_by: uid ?? null,
+        discount, paid, notes: finalNotes || null, created_by: uid,
       }).select("id, invoice_no").single();
       if (e1) throw e1;
       const items = lines.map((l) => ({ sale_id: sale.id, part_id: l.part.id, qty: l.qty, unit_price: l.unit_price }));
