@@ -99,3 +99,18 @@
   }
   input, button, select, textarea { font-family: inherit; }
 }
+
+@media print {
+  @page { size: A5; margin: 10mm; }
+  html, body { background: #ffffff !important; color: #0f172a !important; }
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  .print-area { box-shadow: none !important; border: none !important; background: #ffffff !important; color: #0f172a !important; }
+  .print-area * { color: #0f172a !important; border-color: #cbd5e1 !important; }
+  .print-area .muted-print { color: #475569 !important; }
+  .print-area table { border-collapse: collapse; width: 100%; }
+  .print-area th, .print-area td { border: 1px solid #cbd5e1 !important; padding: 6px 8px; }
+  .print-area thead { background: #f1f5f9 !important; }
+}
+.print-only { display: none; }
+
