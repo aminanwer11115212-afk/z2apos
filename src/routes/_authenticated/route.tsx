@@ -4,6 +4,7 @@ import { useMyRole, useSession, useSignOut } from "@/lib/auth";
 import { LayoutDashboard, Package, ShoppingCart, Truck, Users, Building2, BarChart3, UserCog, LogOut, Menu } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -65,6 +66,7 @@ function AuthedLayout() {
               {isAdmin ? "مدير" : "بائع"}
             </span>
           )}
+          <ThemeToggle />
           <button onClick={signOut} className="p-2 hover:bg-muted rounded-lg" aria-label="خروج">
             <LogOut className="w-4 h-4" />
           </button>
