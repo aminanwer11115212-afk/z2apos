@@ -115,7 +115,7 @@ function DataPage() {
           يحذف كل قطع الغيار والعملاء والموردين والفواتير. لا يحذف حسابات المستخدمين.
           <strong className="text-destructive"> لا يمكن التراجع.</strong>
         </p>
-        <Btn variant="destructive" disabled={mWipe.isPending}
+        <Btn variant="danger" disabled={mWipe.isPending}
           onClick={() => {
             if (!confirm("⚠️ سيتم حذف كل البيانات بشكل نهائي. متأكد؟")) return;
             if (!confirm("تأكيد نهائي: لن تستطيع استرجاعها.")) return;
