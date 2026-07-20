@@ -13,10 +13,8 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const nav = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -29,23 +27,10 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { full_name: fullName },
-            emailRedirectTo: window.location.origin,
-          },
-        });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-      }
-      // Ensure profile + role bootstrap
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
       await supabase.rpc("bootstrap_first_admin");
-      toast.success(mode === "signup" ? "تم إنشاء الحساب" : "تم الدخول");
+      toast.success("تم الدخول");
       nav({ to: "/dashboard", replace: true });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "خطأ";
@@ -66,24 +51,6 @@ function AuthPage() {
         </div>
 
         <form onSubmit={submit} className="bg-card border rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="flex rounded-lg bg-muted p-1 text-sm">
-            <button type="button" onClick={() => setMode("signin")}
-              className={`flex-1 py-2 rounded-md font-medium ${mode === "signin" ? "bg-card shadow" : "text-muted-foreground"}`}>
-              دخول
-            </button>
-            <button type="button" onClick={() => setMode("signup")}
-              className={`flex-1 py-2 rounded-md font-medium ${mode === "signup" ? "bg-card shadow" : "text-muted-foreground"}`}>
-              حساب جديد
-            </button>
-          </div>
-
-          {mode === "signup" && (
-            <div>
-              <label className="block text-sm mb-1 font-medium">الاسم الكامل</label>
-              <input required value={fullName} onChange={(e) => setFullName(e.target.value)}
-                className="w-full h-11 px-3 rounded-lg border bg-background" />
-            </div>
-          )}
           <div>
             <label className="block text-sm mb-1 font-medium">البريد الإلكتروني</label>
             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
@@ -95,8 +62,11 @@ function AuthPage() {
               className="w-full h-11 px-3 rounded-lg border bg-background" />
           </div>
           <button disabled={loading} className="w-full h-11 rounded-lg bg-primary text-primary-foreground font-semibold disabled:opacity-60">
-            {loading ? "جارٍ..." : (mode === "signin" ? "دخول" : "إنشاء الحساب")}
+            {loading ? "جارٍ..." : "دخول"}
           </button>
+          <p className="text-xs text-center text-muted-foreground">
+            الحسابات تُنشأ من قِبل المدير فقط
+          </p>
         </form>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
