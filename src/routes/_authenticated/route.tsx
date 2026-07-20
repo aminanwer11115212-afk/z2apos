@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, redirect, Link, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useMyRole, useSession, useSignOut } from "@/lib/auth";
-import { LayoutDashboard, Package, ShoppingCart, Truck, Users, Building2, BarChart3, UserCog, LogOut, Menu } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, Truck, Users, Building2, BarChart3, UserCog, LogOut, Menu, Database } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -30,6 +30,7 @@ const NAV: NavItem[] = [
   { to: "/suppliers", label: "الموردون", Icon: Building2, adminOnly: true },
   { to: "/reports", label: "التقارير", Icon: BarChart3 },
   { to: "/users", label: "المستخدمون", Icon: UserCog, adminOnly: true },
+  { to: "/data", label: "البيانات", Icon: Database, adminOnly: true },
 ];
 
 const MOBILE_NAV: NavItem[] = [
