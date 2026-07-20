@@ -56,7 +56,8 @@ function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 relative">
+      <div className="absolute top-3 left-3"><ThemeToggle /></div>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="mx-auto flex items-center justify-center"><Logo className="h-28 w-auto" /></div>
