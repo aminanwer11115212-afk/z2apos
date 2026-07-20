@@ -66,6 +66,7 @@ function AuthedLayout() {
               {isAdmin ? "مدير" : "بائع"}
             </span>
           )}
+          <ThemeToggle />
           <button onClick={signOut} className="p-2 hover:bg-muted rounded-lg" aria-label="خروج">
             <LogOut className="w-4 h-4" />
           </button>
