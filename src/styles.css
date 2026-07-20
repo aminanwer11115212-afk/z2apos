@@ -143,15 +143,41 @@ body.print-format-thermal58 { }
 .print-only { display: none; }
 
 
-/* Hide Lovable badge on published site — collapse box completely, no residual gap */
+/* ============================================================
+   Hide Lovable badge — resilient to class/structure changes.
+   Layered selectors: id → data-attr → aria → href → iframe → host.
+   ============================================================ */
+
+/* 1) Known identifiers (current + likely future variants) */
 #lovable-badge,
 #lovable-badge-root,
+#lovable-badge-container,
 [id^="lovable-badge"],
+[id*="lovable_badge"],
 [class*="lovable-badge"],
-a[href*="lovable.dev"][href*="badge"],
-a[href*="lovable.dev/?utm"],
+[class*="LovableBadge"],
+[class*="edit-with-lovable"],
+
+/* 2) Data attributes (framework-agnostic hooks) */
 [data-lovable-badge],
-[data-testid*="lovable-badge"] {
+[data-lovable],
+[data-testid*="lovable-badge"],
+[data-component*="lovable-badge"],
+
+/* 3) Accessibility labels */
+[aria-label*="Lovable" i],
+[aria-label*="Edit with Lovable" i],
+[title*="Edit with Lovable" i],
+
+/* 4) Any anchor or iframe pointing at lovable.dev */
+a[href*="lovable.dev"],
+a[href*="lovable.app"][href*="badge"],
+iframe[src*="lovable.dev"],
+iframe[title*="Lovable" i],
+
+/* 5) Web component / shadow host */
+lovable-badge,
+:is([is="lovable-badge"]) {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
@@ -166,8 +192,20 @@ a[href*="lovable.dev/?utm"],
   padding: 0 !important;
   border: 0 !important;
   position: absolute !important;
+  inset: auto !important;
   overflow: hidden !important;
   clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  transform: scale(0) !important;
+  z-index: -1 !important;
+}
+
+/* 6) Fallback — fixed-positioned bottom-corner floating widgets that
+      link to lovable.dev, in case the element ships with no stable
+      id/class/attribute at all. */
+a[href*="lovable.dev"]:where([style*="position: fixed"], [style*="position:fixed"]),
+div:where([style*="position: fixed"], [style*="position:fixed"]):has(> a[href*="lovable.dev"]) {
+  display: none !important;
 }
 
 
