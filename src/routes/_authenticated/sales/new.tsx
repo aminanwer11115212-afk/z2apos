@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
-import { Field, Input, Btn, PageHeader } from "@/components/ui-kit";
-import { Plus, Minus, Trash2, Search } from "lucide-react";
+import { useSettings, encodeNotes } from "@/lib/settings";
+import { Field, Btn, PageHeader } from "@/components/ui-kit";
+import { Plus, Minus, Trash2, Search, Keyboard } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/sales/new")({
@@ -18,12 +19,21 @@ type Line = { part: Part; qty: number; unit_price: number };
 function NewSale() {
   const qc = useQueryClient();
   const nav = useNavigate();
+  const settings = useSettings();
   const [q, setQ] = useState("");
+  const [hi, setHi] = useState(0);
   const [lines, setLines] = useState<Line[]>([]);
-  const [customerId, setCustomerId] = useState<string>("");
+  const [customerId, setCustomerId] = useState("");
+  const [accountId, setAccountId] = useState(settings.defaultAccountId);
   const [discount, setDiscount] = useState(0);
   const [paid, setPaid] = useState(0);
   const [notes, setNotes] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const customerRef = useRef<HTMLSelectElement>(null);
+  const accountRef = useRef<HTMLSelectElement>(null);
+
+  useEffect(() => { searchRef.current?.focus(); }, []);
+  useEffect(() => { setAccountId(settings.defaultAccountId); }, [settings.defaultAccountId]);
 
   const { data: parts = [] } = useQuery({
     queryKey: ["parts-lite"],
@@ -47,6 +57,8 @@ function NewSale() {
     !q ? [] : parts.filter((p) => p.code.includes(q) || p.name.includes(q)).slice(0, 8),
     [q, parts]);
 
+  useEffect(() => { setHi(0); }, [q]);
+
   const addPart = (p: Part) => {
     setLines((prev) => {
       const i = prev.findIndex((l) => l.part.id === p.id);
@@ -54,6 +66,7 @@ function NewSale() {
       return [...prev, { part: p, qty: 1, unit_price: Number(p.sell_price) }];
     });
     setQ("");
+    searchRef.current?.focus();
   };
   const setQty = (id: string, qty: number) =>
     setLines((p) => p.map((l) => l.part.id === id ? { ...l, qty: Math.max(0.01, qty) } : l));
@@ -69,9 +82,11 @@ function NewSale() {
       if (lines.length === 0) throw new Error("لا توجد أصناف");
       const { data: userRes } = await supabase.auth.getUser();
       const uid = userRes.user?.id;
+      const acc = settings.accounts.find((a) => a.id === accountId);
+      const finalNotes = acc ? encodeNotes(acc.name, notes) : notes;
       const { data: sale, error: e1 } = await supabase.from("sales").insert({
         customer_id: customerId || null,
-        discount, paid, notes: notes || null, created_by: uid ?? null,
+        discount, paid, notes: finalNotes || null, created_by: uid ?? null,
       }).select("id, invoice_no").single();
       if (e1) throw e1;
       const items = lines.map((l) => ({ sale_id: sale.id, part_id: l.part.id, qty: l.qty, unit_price: l.unit_price }));
@@ -82,98 +97,165 @@ function NewSale() {
     onSuccess: (sale) => {
       toast.success(`تم حفظ الفاتورة #${sale.invoice_no}`);
       qc.invalidateQueries();
-      nav({ to: "/sales" });
+      nav({ to: "/sales/$id", params: { id: sale.id } });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  return (
-    <div className="p-4 lg:p-6 max-w-6xl mx-auto">
-      <PageHeader title="فاتورة بيع جديدة" />
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName;
+      const inField = tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA";
+      if (e.key === "F2" || (e.key === "/" && !inField)) { e.preventDefault(); searchRef.current?.focus(); searchRef.current?.select(); }
+      else if (e.key === "F4") { e.preventDefault(); customerRef.current?.focus(); }
+      else if (e.key === "F6") { e.preventDefault(); accountRef.current?.focus(); }
+      else if (e.key === "F9") { e.preventDefault(); if (lines.length && !save.isPending) save.mutate(); }
+      else if (!inField && (e.key === "+" || e.key === "=")) {
+        const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part.id, last.qty + 1); }
+      } else if (!inField && (e.key === "-" || e.key === "_")) {
+        const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part.id, Math.max(0.01, last.qty - 1)); }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lines, save]);
 
-      <div className="grid lg:grid-cols-[1fr,360px] gap-4">
-        <div className="space-y-4">
+  const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowDown") { e.preventDefault(); setHi((h) => Math.min(results.length - 1, h + 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setHi((h) => Math.max(0, h - 1)); }
+    else if (e.key === "Enter" && results[hi]) { e.preventDefault(); addPart(results[hi]); }
+    else if (e.key === "Escape") { setQ(""); }
+  };
+
+  return (
+    <div className="p-3 lg:p-4 max-w-6xl mx-auto">
+      <PageHeader title="بيع سريع" actions={
+        <div className="hidden md:flex items-center gap-1 text-xs text-muted-foreground">
+          <Keyboard className="w-3.5 h-3.5" />
+          <span>F2 بحث · F9 حفظ · F4 عميل · F6 حساب · +/-</span>
+        </div>
+      } />
+
+      <div className="grid lg:grid-cols-[1fr,320px] gap-3">
+        <div className="space-y-3">
           <div className="relative">
-            <div className="flex items-center gap-2 h-12 px-3 rounded-xl border bg-card">
+            <div className="flex items-center gap-2 h-11 px-3 rounded-xl border bg-card">
               <Search className="w-4 h-4 text-muted-foreground" />
-              <input value={q} onChange={(e) => setQ(e.target.value)} autoFocus
-                placeholder="ابحث بكود القطعة أو اسمها لإضافتها..."
-                className="flex-1 bg-transparent outline-none" />
+              <input ref={searchRef} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey}
+                placeholder="ابحث بكود القطعة أو اسمها ثم Enter (F2)..."
+                className="flex-1 bg-transparent outline-none text-sm" />
+              {q && <button onClick={() => setQ("")} className="text-xs text-muted-foreground">✕</button>}
             </div>
             {results.length > 0 && (
               <div className="absolute z-10 top-full mt-1 inset-x-0 bg-card border rounded-xl shadow-lg overflow-hidden">
-                {results.map((p) => (
-                  <button key={p.id} onClick={() => addPart(p)} type="button"
-                    className="w-full text-right px-4 py-3 hover:bg-muted flex items-center justify-between border-b last:border-0">
+                {results.map((p, i) => (
+                  <button key={p.id} onMouseDown={(e) => { e.preventDefault(); addPart(p); }} type="button"
+                    className={`w-full text-right px-3 py-2 flex items-center justify-between border-b last:border-0 ${i === hi ? "bg-muted" : "hover:bg-muted/60"}`}>
                     <div>
-                      <div className="font-medium">{p.name}</div>
+                      <div className="font-medium text-sm">{p.name}</div>
                       <div className="text-xs text-muted-foreground font-mono">{p.code} · متوفر: {Number(p.quantity)}</div>
                     </div>
-                    <div className="font-semibold text-primary">{formatSDG(p.sell_price)}</div>
+                    <div className="font-semibold text-primary text-sm">{formatSDG(p.sell_price)}</div>
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          <div className="bg-card border rounded-2xl overflow-hidden">
+          <div className="bg-card border rounded-xl overflow-hidden">
             {lines.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">أضف قطعة للبدء</div>
+              <div className="p-6 text-center text-sm text-muted-foreground">اضغط F2 وابحث عن قطعة للبدء</div>
             ) : (
-              <div className="divide-y">
-                {lines.map((l) => (
-                  <div key={l.part.id} className="p-3 flex items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{l.part.name}</div>
-                      <div className="text-xs text-muted-foreground font-mono">{l.part.code}</div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => setQty(l.part.id, l.qty - 1)} className="w-8 h-8 rounded-lg border hover:bg-muted"><Minus className="w-4 h-4 mx-auto" /></button>
-                      <input type="number" step="0.01" value={l.qty}
-                        onChange={(e) => setQty(l.part.id, Number(e.target.value))}
-                        className="w-14 h-8 text-center rounded-lg border bg-background" />
-                      <button onClick={() => setQty(l.part.id, l.qty + 1)} className="w-8 h-8 rounded-lg border hover:bg-muted"><Plus className="w-4 h-4 mx-auto" /></button>
-                    </div>
-                    <input type="number" step="0.01" value={l.unit_price}
-                      onChange={(e) => setPrice(l.part.id, Number(e.target.value))}
-                      className="w-24 h-8 px-2 rounded-lg border bg-background text-sm" />
-                    <div className="w-24 text-left font-semibold text-sm">{formatSDG(l.qty * l.unit_price)}</div>
-                    <button onClick={() => remove(l.part.id)} className="p-2 hover:bg-destructive/10 text-destructive rounded-lg"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                ))}
-              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 text-xs">
+                  <tr>
+                    <th className="text-right p-2 font-medium">الصنف</th>
+                    <th className="text-center p-2 font-medium w-28">الكمية</th>
+                    <th className="text-center p-2 font-medium w-24">السعر</th>
+                    <th className="text-left p-2 font-medium w-24">الإجمالي</th>
+                    <th className="w-8"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {lines.map((l) => (
+                    <tr key={l.part.id}>
+                      <td className="p-2">
+                        <div className="font-medium truncate">{l.part.name}</div>
+                        <div className="text-xs text-muted-foreground font-mono">{l.part.code}</div>
+                      </td>
+                      <td className="p-2">
+                        <div className="flex items-center justify-center gap-1">
+                          <button onClick={() => setQty(l.part.id, l.qty - 1)} className="w-7 h-7 rounded border hover:bg-muted"><Minus className="w-3 h-3 mx-auto" /></button>
+                          <input type="number" step="0.01" value={l.qty}
+                            onChange={(e) => setQty(l.part.id, Number(e.target.value))}
+                            className="w-14 h-7 text-center rounded border bg-background text-sm" />
+                          <button onClick={() => setQty(l.part.id, l.qty + 1)} className="w-7 h-7 rounded border hover:bg-muted"><Plus className="w-3 h-3 mx-auto" /></button>
+                        </div>
+                      </td>
+                      <td className="p-2">
+                        <input type="number" step="0.01" value={l.unit_price}
+                          onChange={(e) => setPrice(l.part.id, Number(e.target.value))}
+                          className="w-full h-7 px-2 rounded border bg-background text-sm text-center" />
+                      </td>
+                      <td className="p-2 text-left font-semibold">{formatSDG(l.qty * l.unit_price)}</td>
+                      <td className="p-2">
+                        <button onClick={() => remove(l.part.id)} className="p-1 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="w-4 h-4" /></button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
         </div>
 
-        <aside className="bg-card border rounded-2xl p-4 space-y-3 h-fit lg:sticky lg:top-20">
-          <Field label="العميل (اختياري)">
-            <select value={customerId} onChange={(e) => setCustomerId(e.target.value)}
-              className="w-full h-11 px-3 rounded-lg border bg-background">
+        <aside className="bg-card border rounded-xl p-3 space-y-2 h-fit lg:sticky lg:top-16 text-sm">
+          <Field label="العميل (F4)">
+            <select ref={customerRef} value={customerId} onChange={(e) => setCustomerId(e.target.value)}
+              className="w-full h-10 px-2 rounded-lg border bg-background text-sm">
               <option value="">— بيع نقدي —</option>
               {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </Field>
 
-          <div className="grid grid-cols-2 gap-2">
-            <Field label="خصم"><Input type="number" step="0.01" value={discount} onChange={(e) => setDiscount(Number(e.target.value) || 0)} /></Field>
-            <Field label="مدفوع"><Input type="number" step="0.01" value={paid} onChange={(e) => setPaid(Number(e.target.value) || 0)} /></Field>
-          </div>
-          <Field label="ملاحظات"><Input value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
+          <Field label="الحساب (F6)">
+            <select ref={accountRef} value={accountId} onChange={(e) => setAccountId(e.target.value)}
+              className="w-full h-10 px-2 rounded-lg border bg-background text-sm">
+              {settings.accounts.map((a) => (
+                <option key={a.id} value={a.id}>{a.type === "cash" ? "💵" : "🏦"} {a.name}</option>
+              ))}
+            </select>
+          </Field>
 
-          <div className="border-t pt-3 space-y-1 text-sm">
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="خصم">
+              <input type="number" step="0.01" value={discount} onChange={(e) => setDiscount(Number(e.target.value) || 0)}
+                className="w-full h-10 px-2 rounded-lg border bg-background text-sm" />
+            </Field>
+            <Field label="مدفوع">
+              <input type="number" step="0.01" value={paid} onChange={(e) => setPaid(Number(e.target.value) || 0)}
+                className="w-full h-10 px-2 rounded-lg border bg-background text-sm" />
+            </Field>
+          </div>
+          <Field label="ملاحظات">
+            <input value={notes} onChange={(e) => setNotes(e.target.value)}
+              className="w-full h-10 px-2 rounded-lg border bg-background text-sm" />
+          </Field>
+
+          <div className="border-t pt-2 space-y-1 text-xs">
             <Row label="الإجمالي" value={formatSDG(total)} />
             <Row label="الخصم" value={`- ${formatSDG(discount)}`} />
             <Row label="المدفوع" value={`- ${formatSDG(paid)}`} />
-            <div className="flex justify-between font-bold text-base pt-2 border-t">
+            <div className="flex justify-between font-bold text-sm pt-1 border-t">
               <span>المتبقي</span><span className={due > 0 ? "text-destructive" : "text-success"}>{formatSDG(due)}</span>
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <Btn variant="outline" onClick={() => { setLines([]); setDiscount(0); setPaid(0); setNotes(""); setCustomerId(""); }} className="flex-1">مسح</Btn>
-            <Btn onClick={() => save.mutate()} disabled={save.isPending || lines.length === 0} className="flex-1">
-              حفظ الفاتورة
+          <div className="flex gap-2 pt-1">
+            <Btn variant="outline" onClick={() => { setLines([]); setDiscount(0); setPaid(0); setNotes(""); setCustomerId(""); }} className="flex-1 h-9 text-sm">مسح</Btn>
+            <Btn onClick={() => save.mutate()} disabled={save.isPending || lines.length === 0} className="flex-1 h-9 text-sm">
+              حفظ (F9)
             </Btn>
           </div>
         </aside>
