@@ -143,15 +143,31 @@ body.print-format-thermal58 { }
 .print-only { display: none; }
 
 
-/* Hide Lovable badge on published site */
+/* Hide Lovable badge on published site — collapse box completely, no residual gap */
 #lovable-badge,
+#lovable-badge-root,
+[id^="lovable-badge"],
+[class*="lovable-badge"],
 a[href*="lovable.dev"][href*="badge"],
 a[href*="lovable.dev/?utm"],
-[data-lovable-badge] {
+[data-lovable-badge],
+[data-testid*="lovable-badge"] {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
   pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: 0 !important;
+  max-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  position: absolute !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
 }
 
 
