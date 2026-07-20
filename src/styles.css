@@ -114,3 +114,15 @@
 }
 .print-only { display: none; }
 
+/* Hide Lovable badge on published site */
+#lovable-badge,
+a[href*="lovable.dev"][href*="badge"],
+a[href*="lovable.dev/?utm"],
+[data-lovable-badge] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+
