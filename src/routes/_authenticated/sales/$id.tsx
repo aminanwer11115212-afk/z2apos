@@ -1,10 +1,13 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
+import { useSettings, parseNotes } from "@/lib/settings";
 import { Btn } from "@/components/ui-kit";
 import { Logo } from "@/components/Logo";
 import { Printer, ArrowRight } from "lucide-react";
+
 
 export const Route = createFileRoute("/_authenticated/sales/$id")({
   head: () => ({ meta: [{ title: "فاتورة — 2A" }] }),
