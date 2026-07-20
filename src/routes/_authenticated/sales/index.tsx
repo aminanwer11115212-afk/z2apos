@@ -50,8 +50,13 @@ function SalesList() {
                 const net = Number(s.total) - Number(s.discount);
                 const due = net - Number(s.paid);
                 return (
-                  <tr key={s.id} className="border-t hover:bg-muted/50">
-                    <td className="p-3 font-mono">{s.invoice_no}</td>
+                  <tr key={s.id} className="border-t hover:bg-muted/50 cursor-pointer" onClick={(e) => {
+                    if ((e.target as HTMLElement).closest("a")) return;
+                    window.location.href = `/sales/${s.id}`;
+                  }}>
+                    <td className="p-3 font-mono">
+                      <Link to="/sales/$id" params={{ id: s.id }} className="text-primary hover:underline">#{s.invoice_no}</Link>
+                    </td>
                     <td className="p-3 text-muted-foreground">
                       {new Date(s.created_at).toLocaleString("ar-SD", { dateStyle: "short", timeStyle: "short" })}
                     </td>
@@ -61,6 +66,7 @@ function SalesList() {
                   </tr>
                 );
               })}
+
             </tbody>
           </table>
         </div>

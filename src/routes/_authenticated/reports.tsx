@@ -3,12 +3,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
-import { PageHeader, Field, Input } from "@/components/ui-kit";
+import { PageHeader, Field, Input, Btn } from "@/components/ui-kit";
+import { Logo } from "@/components/Logo";
+import { Printer } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({ meta: [{ title: "التقارير — 2A" }] }),
   component: Reports,
 });
+
 
 function Reports() {
   const today = new Date().toISOString().slice(0, 10);
@@ -42,35 +45,59 @@ function Reports() {
 
   return (
     <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
-      <PageHeader title="التقارير" subtitle="ملخص المبيعات والمشتريات وقيمة المخزون" />
+      <div className="no-print">
+        <PageHeader
+          title="التقارير"
+          subtitle="ملخص المبيعات والمشتريات وقيمة المخزون"
+          actions={<Btn variant="secondary" onClick={() => window.print()}><Printer className="w-4 h-4 inline ml-1" />طباعة / PDF</Btn>}
+        />
 
-      <div className="grid grid-cols-2 gap-3 max-w-md">
-        <Field label="من"><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></Field>
-        <Field label="إلى"><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></Field>
+        <div className="grid grid-cols-2 gap-3 max-w-md">
+          <Field label="من"><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></Field>
+          <Field label="إلى"><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></Field>
+        </div>
       </div>
 
-      <Section title="المبيعات">
-        <Stat label="عدد الفواتير" value={String(data?.salesCount ?? 0)} />
-        <Stat label="إجمالي المبيعات (صافي)" value={formatSDG(data?.salesNet ?? 0)} />
-        <Stat label="المحصّل" value={formatSDG(data?.salesCollected ?? 0)} />
-        <Stat label="المتبقي على العملاء" value={formatSDG((data?.salesNet ?? 0) - (data?.salesCollected ?? 0))} highlight />
-      </Section>
+      <div className="print-area space-y-6">
+        {/* Print header — hidden on screen, shown on print */}
+        <div className="hidden print:flex items-center justify-between border-b pb-3">
+          <div className="flex items-center gap-3">
+            <Logo variant="light" className="h-12 w-auto" />
+            <div>
+              <div className="font-bold text-lg">نظام 2A — التقارير</div>
+              <div className="text-xs muted-print text-muted-foreground">قطع غيار السيارات</div>
+            </div>
+          </div>
+          <div className="text-left text-xs muted-print text-muted-foreground">
+            <div>الفترة: {from} → {to}</div>
+            <div>طُبعت: {new Date().toLocaleString("ar-SD", { dateStyle: "short", timeStyle: "short" })}</div>
+          </div>
+        </div>
 
-      <Section title="المشتريات">
-        <Stat label="عدد الفواتير" value={String(data?.purchasesCount ?? 0)} />
-        <Stat label="إجمالي المشتريات" value={formatSDG(data?.purchasesTotal ?? 0)} />
-        <Stat label="المدفوع" value={formatSDG(data?.purchasesPaid ?? 0)} />
-        <Stat label="المستحق للموردين" value={formatSDG((data?.purchasesTotal ?? 0) - (data?.purchasesPaid ?? 0))} highlight />
-      </Section>
+        <Section title="المبيعات">
+          <Stat label="عدد الفواتير" value={String(data?.salesCount ?? 0)} />
+          <Stat label="إجمالي المبيعات (صافي)" value={formatSDG(data?.salesNet ?? 0)} />
+          <Stat label="المحصّل" value={formatSDG(data?.salesCollected ?? 0)} />
+          <Stat label="المتبقي على العملاء" value={formatSDG((data?.salesNet ?? 0) - (data?.salesCollected ?? 0))} highlight />
+        </Section>
 
-      <Section title="قيمة المخزون الحالي">
-        <Stat label="بسعر التكلفة" value={formatSDG(data?.stockValueCost ?? 0)} />
-        <Stat label="بسعر البيع" value={formatSDG(data?.stockValueSell ?? 0)} />
-        <Stat label="الربح المتوقع" value={formatSDG((data?.stockValueSell ?? 0) - (data?.stockValueCost ?? 0))} highlight />
-      </Section>
+        <Section title="المشتريات">
+          <Stat label="عدد الفواتير" value={String(data?.purchasesCount ?? 0)} />
+          <Stat label="إجمالي المشتريات" value={formatSDG(data?.purchasesTotal ?? 0)} />
+          <Stat label="المدفوع" value={formatSDG(data?.purchasesPaid ?? 0)} />
+          <Stat label="المستحق للموردين" value={formatSDG((data?.purchasesTotal ?? 0) - (data?.purchasesPaid ?? 0))} highlight />
+        </Section>
+
+        <Section title="قيمة المخزون الحالي">
+          <Stat label="بسعر التكلفة" value={formatSDG(data?.stockValueCost ?? 0)} />
+          <Stat label="بسعر البيع" value={formatSDG(data?.stockValueSell ?? 0)} />
+          <Stat label="الربح المتوقع" value={formatSDG((data?.stockValueSell ?? 0) - (data?.stockValueCost ?? 0))} highlight />
+        </Section>
+      </div>
     </div>
   );
 }
+
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
