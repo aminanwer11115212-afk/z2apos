@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_authenticated")({
     const { data } = await supabase.auth.getUser();
     if (!data.user) throw redirect({ to: "/auth" });
     // ensure bootstrap ran once
-    await supabase.rpc("bootstrap_first_admin").catch(() => {});
+    try { await supabase.rpc("bootstrap_first_admin"); } catch { /* ignore */ }
     return { userId: data.user.id };
   },
   component: AuthedLayout,
