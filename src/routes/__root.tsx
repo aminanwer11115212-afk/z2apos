@@ -49,7 +49,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { name: "theme-color", content: "#0f172a" },
+      { name: "theme-color", content: "#0f172a", media: "(prefers-color-scheme: dark)" },
+      { name: "theme-color", content: "#ffffff", media: "(prefers-color-scheme: light)" },
       { title: "2A — إدارة قطع غيار السيارات" },
       { name: "description", content: "نظام 2A لإدارة قطع غيار السيارات — من تطوير أمين أنور أحمد" },
       { name: "author", content: "أمين أنور أحمد" },
@@ -64,7 +65,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
-      { rel: "apple-touch-icon", href: "/icon-192.png" },
+      { rel: "icon", type: "image/png", sizes: "192x192", href: "/icon-192-light.png", media: "(prefers-color-scheme: light)" },
+      { rel: "icon", type: "image/png", sizes: "192x192", href: "/icon-192.png", media: "(prefers-color-scheme: dark)" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+
     ],
   }),
   shellComponent: RootShell,
