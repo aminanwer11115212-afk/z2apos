@@ -49,7 +49,7 @@ function Reports() {
         <PageHeader
           title="التقارير"
           subtitle="ملخص المبيعات والمشتريات وقيمة المخزون"
-          actions={<Btn variant="secondary" onClick={() => window.print()}><Printer className="w-4 h-4 inline ml-1" />طباعة / PDF</Btn>}
+          actions={<Btn variant="outline" onClick={() => window.print()}><Printer className="w-4 h-4 inline ml-1" />طباعة / PDF</Btn>}
         />
 
         <div className="grid grid-cols-2 gap-3 max-w-md">

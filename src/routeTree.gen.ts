@@ -21,6 +21,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedCustomersRouteImport } from './routes/_authenticated/customers'
 import { Route as AuthenticatedSalesIndexRouteImport } from './routes/_authenticated/sales/index'
 import { Route as AuthenticatedSalesNewRouteImport } from './routes/_authenticated/sales/new'
+import { Route as AuthenticatedSalesIdRouteImport } from './routes/_authenticated/sales/$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -81,6 +82,11 @@ const AuthenticatedSalesNewRoute = AuthenticatedSalesNewRouteImport.update({
   path: '/sales/new',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSalesIdRoute = AuthenticatedSalesIdRouteImport.update({
+  id: '/sales/$id',
+  path: '/sales/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -92,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof AuthenticatedReportsRoute
   '/suppliers': typeof AuthenticatedSuppliersRoute
   '/users': typeof AuthenticatedUsersRoute
+  '/sales/$id': typeof AuthenticatedSalesIdRoute
   '/sales/new': typeof AuthenticatedSalesNewRoute
   '/sales/': typeof AuthenticatedSalesIndexRoute
 }
@@ -105,6 +112,7 @@ export interface FileRoutesByTo {
   '/reports': typeof AuthenticatedReportsRoute
   '/suppliers': typeof AuthenticatedSuppliersRoute
   '/users': typeof AuthenticatedUsersRoute
+  '/sales/$id': typeof AuthenticatedSalesIdRoute
   '/sales/new': typeof AuthenticatedSalesNewRoute
   '/sales': typeof AuthenticatedSalesIndexRoute
 }
@@ -120,6 +128,7 @@ export interface FileRoutesById {
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/suppliers': typeof AuthenticatedSuppliersRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
+  '/_authenticated/sales/$id': typeof AuthenticatedSalesIdRoute
   '/_authenticated/sales/new': typeof AuthenticatedSalesNewRoute
   '/_authenticated/sales/': typeof AuthenticatedSalesIndexRoute
 }
@@ -135,6 +144,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/suppliers'
     | '/users'
+    | '/sales/$id'
     | '/sales/new'
     | '/sales/'
   fileRoutesByTo: FileRoutesByTo
@@ -148,6 +158,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/suppliers'
     | '/users'
+    | '/sales/$id'
     | '/sales/new'
     | '/sales'
   id:
@@ -162,6 +173,7 @@ export interface FileRouteTypes {
     | '/_authenticated/reports'
     | '/_authenticated/suppliers'
     | '/_authenticated/users'
+    | '/_authenticated/sales/$id'
     | '/_authenticated/sales/new'
     | '/_authenticated/sales/'
   fileRoutesById: FileRoutesById
@@ -258,6 +270,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSalesNewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/sales/$id': {
+      id: '/_authenticated/sales/$id'
+      path: '/sales/$id'
+      fullPath: '/sales/$id'
+      preLoaderRoute: typeof AuthenticatedSalesIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -269,6 +288,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSuppliersRoute: typeof AuthenticatedSuppliersRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
+  AuthenticatedSalesIdRoute: typeof AuthenticatedSalesIdRoute
   AuthenticatedSalesNewRoute: typeof AuthenticatedSalesNewRoute
   AuthenticatedSalesIndexRoute: typeof AuthenticatedSalesIndexRoute
 }
@@ -281,6 +301,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSuppliersRoute: AuthenticatedSuppliersRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
+  AuthenticatedSalesIdRoute: AuthenticatedSalesIdRoute,
   AuthenticatedSalesNewRoute: AuthenticatedSalesNewRoute,
   AuthenticatedSalesIndexRoute: AuthenticatedSalesIndexRoute,
 }
