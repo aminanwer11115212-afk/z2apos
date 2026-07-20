@@ -34,6 +34,7 @@ type SaleFull = {
 
 function SaleView() {
   const { id } = Route.useParams();
+  const settings = useSettings();
   const { data, isLoading } = useQuery({
     queryKey: ["sale", id],
     queryFn: async () => {
@@ -45,13 +46,23 @@ function SaleView() {
     },
   });
 
+  // Apply print format class to <body> so @page rules take effect
+  useEffect(() => {
+    const cls = `print-format-${settings.printFormat}`;
+    document.body.classList.add(cls);
+    return () => document.body.classList.remove(cls);
+  }, [settings.printFormat]);
+
   if (isLoading || !data) return <div className="p-6 text-center text-muted-foreground">جارٍ التحميل…</div>;
 
   const net = Number(data.total) - Number(data.discount);
   const due = net - Number(data.paid);
+  const parsed = parseNotes(data.notes);
+  const isThermal = settings.printFormat !== "a4";
+  const containerMax = isThermal ? "max-w-sm" : "max-w-3xl";
 
   return (
-    <div className="p-4 lg:p-6 max-w-3xl mx-auto">
+    <div className={`p-4 lg:p-6 ${containerMax} mx-auto`}>
       <div className="flex items-center justify-between mb-4 no-print">
         <Link to="/sales" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
           <ArrowRight className="w-4 h-4" />العودة للفواتير
@@ -59,40 +70,47 @@ function SaleView() {
         <Btn onClick={() => window.print()}><Printer className="w-4 h-4 inline ml-1" />طباعة / PDF</Btn>
       </div>
 
-      <div className="print-area bg-card border rounded-2xl p-6 shadow-sm">
+      <div className={`print-area bg-card border rounded-2xl p-6 shadow-sm ${isThermal ? "text-xs" : ""}`}>
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 pb-4 border-b">
+        <div className="flex items-start justify-between gap-4 pb-3 border-b">
           <div className="flex items-center gap-3">
-            {/* Force the light-bg logo variant so it prints crisp on white */}
-            <Logo variant="light" className="h-14 w-auto" />
+            {settings.showLogo && <Logo variant="light" className={isThermal ? "h-10 w-auto" : "h-14 w-auto"} />}
             <div>
-              <div className="text-lg font-bold">نظام 2A</div>
-              <div className="text-xs muted-print text-muted-foreground">قطع غيار السيارات</div>
+              <div className={`font-bold ${isThermal ? "text-sm" : "text-lg"}`}>{settings.storeName || "نظام 2A"}</div>
+              {settings.storePhone && <div className="text-xs muted-print text-muted-foreground">📞 {settings.storePhone}</div>}
+              {settings.storeAddress && <div className="text-xs muted-print text-muted-foreground hide-on-thermal">{settings.storeAddress}</div>}
             </div>
           </div>
           <div className="text-left">
             <div className="text-xs muted-print text-muted-foreground">رقم الفاتورة</div>
-            <div className="text-2xl font-bold font-mono">#{data.invoice_no}</div>
+            <div className={`font-bold font-mono ${isThermal ? "text-lg" : "text-2xl"}`}>#{data.invoice_no}</div>
             <div className="text-xs muted-print text-muted-foreground mt-1">
               {new Date(data.created_at).toLocaleString("ar-SD", { dateStyle: "medium", timeStyle: "short" })}
             </div>
           </div>
         </div>
 
-        {/* Customer */}
-        <div className="grid grid-cols-2 gap-4 py-4 text-sm">
+        {/* Customer + account */}
+        <div className="grid grid-cols-2 gap-3 py-3 text-sm">
           <div>
             <div className="muted-print text-muted-foreground text-xs">العميل</div>
             <div className="font-semibold">{data.customers?.name ?? "نقدي"}</div>
             {data.customers?.phone && <div className="text-xs muted-print text-muted-foreground">{data.customers.phone}</div>}
           </div>
-          {data.notes && (
+          {parsed.account && (
             <div>
+              <div className="muted-print text-muted-foreground text-xs">الحساب</div>
+              <div className="font-semibold">{parsed.account}</div>
+            </div>
+          )}
+          {parsed.text && (
+            <div className="col-span-2 hide-on-thermal">
               <div className="muted-print text-muted-foreground text-xs">ملاحظات</div>
-              <div>{data.notes}</div>
+              <div>{parsed.text}</div>
             </div>
           )}
         </div>
+
 
         {/* Items */}
         <table className="w-full text-sm">
