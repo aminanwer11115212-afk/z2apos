@@ -1,7 +1,10 @@
 import { createFileRoute, Outlet, redirect, Link, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useMyRole, useSession, useSignOut } from "@/lib/auth";
-import { LayoutDashboard, Package, ShoppingCart, Truck, Users, Building2, BarChart3, UserCog, LogOut, Menu, Database } from "lucide-react";
+import {
+  LayoutDashboard, Package, ShoppingCart, Truck, Users, Building2, BarChart3,
+  UserCog, LogOut, Menu, Database, Settings as SettingsIcon, ChevronDown, Zap
+} from "lucide-react";
 import { useState } from "react";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -11,7 +14,6 @@ export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
     const { data } = await supabase.auth.getUser();
     if (!data.user) throw redirect({ to: "/auth" });
-    // ensure bootstrap ran once
     try { await supabase.rpc("bootstrap_first_admin"); } catch { /* ignore */ }
     return { userId: data.user.id };
   },
@@ -19,24 +21,53 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 type NavItem = { to: string; label: string; Icon: typeof Package; adminOnly?: boolean };
+type NavGroup = { label: string; items: NavItem[]; adminOnly?: boolean };
 
-const NAV: NavItem[] = [
-  { to: "/dashboard", label: "الرئيسية", Icon: LayoutDashboard },
-  { to: "/sales/new", label: "بيع سريع", Icon: ShoppingCart },
-  { to: "/parts", label: "قطع الغيار", Icon: Package },
-  { to: "/sales", label: "المبيعات", Icon: ShoppingCart },
-  { to: "/purchases", label: "المشتريات", Icon: Truck, adminOnly: true },
-  { to: "/customers", label: "العملاء", Icon: Users },
-  { to: "/suppliers", label: "الموردون", Icon: Building2, adminOnly: true },
-  { to: "/reports", label: "التقارير", Icon: BarChart3 },
-  { to: "/users", label: "المستخدمون", Icon: UserCog, adminOnly: true },
-  { to: "/data", label: "البيانات", Icon: Database, adminOnly: true },
+const HOME: NavItem = { to: "/dashboard", label: "الرئيسية", Icon: LayoutDashboard };
+
+const GROUPS: NavGroup[] = [
+  {
+    label: "المنتجات",
+    items: [
+      { to: "/sales/new", label: "بيع سريع", Icon: Zap },
+      { to: "/parts", label: "قطع الغيار", Icon: Package },
+    ],
+  },
+  {
+    label: "المعاملات",
+    items: [
+      { to: "/sales", label: "المبيعات", Icon: ShoppingCart },
+      { to: "/purchases", label: "المشتريات", Icon: Truck, adminOnly: true },
+    ],
+  },
+  {
+    label: "جهات الاتصال",
+    items: [
+      { to: "/customers", label: "العملاء", Icon: Users },
+      { to: "/suppliers", label: "الموردون", Icon: Building2, adminOnly: true },
+    ],
+  },
+  {
+    label: "التحليل",
+    items: [
+      { to: "/reports", label: "التقارير", Icon: BarChart3 },
+    ],
+  },
+  {
+    label: "النظام",
+    adminOnly: true,
+    items: [
+      { to: "/settings", label: "الإعدادات", Icon: SettingsIcon, adminOnly: true },
+      { to: "/users", label: "المستخدمون", Icon: UserCog, adminOnly: true },
+      { to: "/data", label: "البيانات", Icon: Database, adminOnly: true },
+    ],
+  },
 ];
 
 const MOBILE_NAV: NavItem[] = [
   { to: "/dashboard", label: "الرئيسية", Icon: LayoutDashboard },
   { to: "/parts", label: "المخزون", Icon: Package },
-  { to: "/sales/new", label: "بيع", Icon: ShoppingCart },
+  { to: "/sales/new", label: "بيع", Icon: Zap },
   { to: "/sales", label: "الفواتير", Icon: BarChart3 },
 ];
 
@@ -47,11 +78,14 @@ function AuthedLayout() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
   const isAdmin = role === "admin";
-  const items = NAV.filter((n) => !n.adminOnly || isAdmin);
+
+  const visibleGroups = GROUPS
+    .filter((g) => !g.adminOnly || isAdmin)
+    .map((g) => ({ ...g, items: g.items.filter((i) => !i.adminOnly || isAdmin) }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-30 h-14 bg-card border-b flex items-center px-4 gap-3">
         <button onClick={() => setMobileOpen(true)} className="lg:hidden p-2 -mr-2" aria-label="القائمة">
           <Menu className="w-5 h-5" />
@@ -75,38 +109,25 @@ function AuthedLayout() {
       </header>
 
       <div className="flex">
-        {/* Desktop Sidebar */}
-        <aside className="hidden lg:block w-56 shrink-0 border-l min-h-[calc(100vh-3.5rem)] bg-card">
+        <aside className="hidden lg:block w-60 shrink-0 border-l min-h-[calc(100vh-3.5rem)] bg-card">
           <nav className="p-3 space-y-1">
-            {items.map((n) => {
-              const active = path === n.to || (n.to !== "/dashboard" && path.startsWith(n.to));
-              return (
-                <Link key={n.to} to={n.to} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${active ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
-                  <n.Icon className="w-4 h-4" />
-                  {n.label}
-                </Link>
-              );
-            })}
+            <NavLink item={HOME} path={path} />
+            {visibleGroups.map((g) => (
+              <SidebarGroup key={g.label} group={g} path={path} />
+            ))}
           </nav>
         </aside>
 
-        {/* Mobile drawer */}
         {mobileOpen && (
           <div className="lg:hidden fixed inset-0 z-40 flex">
             <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
-            <aside className="relative w-64 bg-card border-l h-full overflow-y-auto animate-in slide-in-from-right">
+            <aside className="relative w-72 bg-card border-l h-full overflow-y-auto animate-in slide-in-from-right">
               <div className="h-14 border-b flex items-center px-4 font-bold">القائمة</div>
               <nav className="p-3 space-y-1">
-                {items.map((n) => {
-                  const active = path === n.to || (n.to !== "/dashboard" && path.startsWith(n.to));
-                  return (
-                    <Link key={n.to} to={n.to} onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${active ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
-                      <n.Icon className="w-4 h-4" />
-                      {n.label}
-                    </Link>
-                  );
-                })}
+                <NavLink item={HOME} path={path} onClick={() => setMobileOpen(false)} />
+                {visibleGroups.map((g) => (
+                  <SidebarGroup key={g.label} group={g} path={path} onNavigate={() => setMobileOpen(false)} defaultOpen />
+                ))}
               </nav>
             </aside>
           </div>
@@ -117,7 +138,6 @@ function AuthedLayout() {
         </main>
       </div>
 
-      {/* Mobile bottom nav */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-card border-t h-16 flex">
         {MOBILE_NAV.map((n) => {
           const active = path === n.to || (n.to !== "/dashboard" && path.startsWith(n.to));
@@ -129,6 +149,38 @@ function AuthedLayout() {
           );
         })}
       </nav>
+    </div>
+  );
+}
+
+function NavLink({ item, path, onClick }: { item: NavItem; path: string; onClick?: () => void }) {
+  const active = path === item.to || (item.to !== "/dashboard" && path.startsWith(item.to));
+  return (
+    <Link to={item.to} onClick={onClick}
+      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium ${active ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
+      <item.Icon className="w-4 h-4" />
+      {item.label}
+    </Link>
+  );
+}
+
+function SidebarGroup({ group, path, onNavigate, defaultOpen }: { group: NavGroup; path: string; onNavigate?: () => void; defaultOpen?: boolean }) {
+  const anyActive = group.items.some((i) => path === i.to || (i.to !== "/dashboard" && path.startsWith(i.to)));
+  const [open, setOpen] = useState(defaultOpen ?? anyActive);
+  return (
+    <div className="pt-2">
+      <button onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground hover:text-foreground">
+        <span>{group.label}</span>
+        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="mt-1 space-y-0.5">
+          {group.items.map((n) => (
+            <NavLink key={n.to} item={n} path={path} onClick={onNavigate} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
