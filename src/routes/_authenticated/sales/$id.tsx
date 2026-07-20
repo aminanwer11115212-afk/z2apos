@@ -148,9 +148,11 @@ function SaleView() {
           </div>
         </div>
 
-        <div className="mt-8 pt-4 border-t text-center text-xs muted-print text-muted-foreground">
-          نظام 2A — من تطوير أمين أنور أحمد
+        <div className="mt-6 pt-3 border-t text-center text-xs muted-print text-muted-foreground">
+          {settings.invoiceFooter || "شكراً لتعاملكم معنا"}
+          <div className="mt-1 hide-on-thermal">نظام 2A — من تطوير أمين أنور أحمد</div>
         </div>
+
       </div>
     </div>
   );
