@@ -12,10 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedSuppliersRouteImport } from './routes/_authenticated/suppliers'
+import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
+import { Route as AuthenticatedPurchasesRouteImport } from './routes/_authenticated/purchases'
 import { Route as AuthenticatedPartsRouteImport } from './routes/_authenticated/parts'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCustomersRouteImport } from './routes/_authenticated/customers'
+import { Route as AuthenticatedSalesIndexRouteImport } from './routes/_authenticated/sales/index'
+import { Route as AuthenticatedSalesNewRouteImport } from './routes/_authenticated/sales/new'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -31,9 +36,24 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSuppliersRoute = AuthenticatedSuppliersRouteImport.update({
   id: '/suppliers',
   path: '/suppliers',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPurchasesRoute = AuthenticatedPurchasesRouteImport.update({
+  id: '/purchases',
+  path: '/purchases',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedPartsRoute = AuthenticatedPartsRouteImport.update({
@@ -51,6 +71,16 @@ const AuthenticatedCustomersRoute = AuthenticatedCustomersRouteImport.update({
   path: '/customers',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSalesIndexRoute = AuthenticatedSalesIndexRouteImport.update({
+  id: '/sales/',
+  path: '/sales/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSalesNewRoute = AuthenticatedSalesNewRouteImport.update({
+  id: '/sales/new',
+  path: '/sales/new',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -58,7 +88,12 @@ export interface FileRoutesByFullPath {
   '/customers': typeof AuthenticatedCustomersRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/parts': typeof AuthenticatedPartsRoute
+  '/purchases': typeof AuthenticatedPurchasesRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/suppliers': typeof AuthenticatedSuppliersRoute
+  '/users': typeof AuthenticatedUsersRoute
+  '/sales/new': typeof AuthenticatedSalesNewRoute
+  '/sales/': typeof AuthenticatedSalesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -66,7 +101,12 @@ export interface FileRoutesByTo {
   '/customers': typeof AuthenticatedCustomersRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/parts': typeof AuthenticatedPartsRoute
+  '/purchases': typeof AuthenticatedPurchasesRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/suppliers': typeof AuthenticatedSuppliersRoute
+  '/users': typeof AuthenticatedUsersRoute
+  '/sales/new': typeof AuthenticatedSalesNewRoute
+  '/sales': typeof AuthenticatedSalesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -76,7 +116,12 @@ export interface FileRoutesById {
   '/_authenticated/customers': typeof AuthenticatedCustomersRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/parts': typeof AuthenticatedPartsRoute
+  '/_authenticated/purchases': typeof AuthenticatedPurchasesRoute
+  '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/suppliers': typeof AuthenticatedSuppliersRoute
+  '/_authenticated/users': typeof AuthenticatedUsersRoute
+  '/_authenticated/sales/new': typeof AuthenticatedSalesNewRoute
+  '/_authenticated/sales/': typeof AuthenticatedSalesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -86,9 +131,25 @@ export interface FileRouteTypes {
     | '/customers'
     | '/dashboard'
     | '/parts'
+    | '/purchases'
+    | '/reports'
     | '/suppliers'
+    | '/users'
+    | '/sales/new'
+    | '/sales/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/customers' | '/dashboard' | '/parts' | '/suppliers'
+  to:
+    | '/'
+    | '/auth'
+    | '/customers'
+    | '/dashboard'
+    | '/parts'
+    | '/purchases'
+    | '/reports'
+    | '/suppliers'
+    | '/users'
+    | '/sales/new'
+    | '/sales'
   id:
     | '__root__'
     | '/'
@@ -97,7 +158,12 @@ export interface FileRouteTypes {
     | '/_authenticated/customers'
     | '/_authenticated/dashboard'
     | '/_authenticated/parts'
+    | '/_authenticated/purchases'
+    | '/_authenticated/reports'
     | '/_authenticated/suppliers'
+    | '/_authenticated/users'
+    | '/_authenticated/sales/new'
+    | '/_authenticated/sales/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -129,11 +195,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/users': {
+      id: '/_authenticated/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AuthenticatedUsersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/suppliers': {
       id: '/_authenticated/suppliers'
       path: '/suppliers'
       fullPath: '/suppliers'
       preLoaderRoute: typeof AuthenticatedSuppliersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/reports': {
+      id: '/_authenticated/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AuthenticatedReportsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/purchases': {
+      id: '/_authenticated/purchases'
+      path: '/purchases'
+      fullPath: '/purchases'
+      preLoaderRoute: typeof AuthenticatedPurchasesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/parts': {
@@ -157,6 +244,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCustomersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/sales/': {
+      id: '/_authenticated/sales/'
+      path: '/sales'
+      fullPath: '/sales/'
+      preLoaderRoute: typeof AuthenticatedSalesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/sales/new': {
+      id: '/_authenticated/sales/new'
+      path: '/sales/new'
+      fullPath: '/sales/new'
+      preLoaderRoute: typeof AuthenticatedSalesNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -164,14 +265,24 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCustomersRoute: typeof AuthenticatedCustomersRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedPartsRoute: typeof AuthenticatedPartsRoute
+  AuthenticatedPurchasesRoute: typeof AuthenticatedPurchasesRoute
+  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSuppliersRoute: typeof AuthenticatedSuppliersRoute
+  AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
+  AuthenticatedSalesNewRoute: typeof AuthenticatedSalesNewRoute
+  AuthenticatedSalesIndexRoute: typeof AuthenticatedSalesIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCustomersRoute: AuthenticatedCustomersRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedPartsRoute: AuthenticatedPartsRoute,
+  AuthenticatedPurchasesRoute: AuthenticatedPurchasesRoute,
+  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSuppliersRoute: AuthenticatedSuppliersRoute,
+  AuthenticatedUsersRoute: AuthenticatedUsersRoute,
+  AuthenticatedSalesNewRoute: AuthenticatedSalesNewRoute,
+  AuthenticatedSalesIndexRoute: AuthenticatedSalesIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
