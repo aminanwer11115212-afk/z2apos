@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -57,8 +58,8 @@ function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="mx-auto w-16 h-16 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center text-3xl font-extrabold">2A</div>
-          <h1 className="mt-4 text-2xl font-bold">نظام 2A</h1>
+          <div className="mx-auto flex items-center justify-center"><Logo className="h-28 w-auto" /></div>
+          <h1 className="mt-2 text-2xl font-bold">نظام 2A</h1>
           <p className="text-sm text-muted-foreground">إدارة قطع غيار السيارات</p>
         </div>
 

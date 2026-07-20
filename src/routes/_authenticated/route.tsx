@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMyRole, useSession, useSignOut } from "@/lib/auth";
 import { LayoutDashboard, Package, ShoppingCart, Truck, Users, Building2, BarChart3, UserCog, LogOut, Menu } from "lucide-react";
 import { useState } from "react";
+import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -54,8 +55,8 @@ function AuthedLayout() {
           <Menu className="w-5 h-5" />
         </button>
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm">2A</div>
-          <div className="font-bold">نظام 2A</div>
+          <Logo className="h-9 w-auto" />
+          <div className="font-bold hidden sm:inline">نظام 2A</div>
         </div>
         <div className="mr-auto flex items-center gap-3 text-sm">
           <span className="hidden sm:inline text-muted-foreground">{session?.user.email}</span>
