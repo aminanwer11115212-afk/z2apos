@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-async function assertAdmin(ctx: { supabase: { rpc: (n: string, a: unknown) => Promise<{ data: unknown; error: unknown }> }; userId: string }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function assertAdmin(ctx: any) {
   const { data, error } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "admin" });
   if (error) throw new Error("فشل التحقّق من الصلاحية");
   if (!data) throw new Error("مسموح للمديرين فقط");
@@ -98,7 +99,8 @@ export const adminExportAll = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const dump: Record<string, unknown[]> = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const dump: Record<string, any[]> = {};
     for (const t of DATA_TABLES) {
       const { data, error } = await supabaseAdmin.from(t).select("*");
       if (error) throw new Error(`${t}: ${error.message}`);
@@ -109,7 +111,8 @@ export const adminExportAll = createServerFn({ method: "GET" })
 
 export const adminImportAll = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { payload: { tables: Record<string, unknown[]> }; wipeFirst: boolean }) => d)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  .inputValidator((d: { payload: { tables: Record<string, any[]> }; wipeFirst: boolean }) => d)
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
