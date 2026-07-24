@@ -35,7 +35,7 @@ type SaleFull = {
   customer_id: string | null;
   customers: { id: string; name: string; phone: string | null; balance: number } | null;
   sale_items: { id: string; qty: number; unit_price: number; subtotal: number;
-    parts: { name: string; sku: string | null } | null }[];
+    parts: { name: string; code: string | null } | null }[];
 };
 
 function SaleView() {
