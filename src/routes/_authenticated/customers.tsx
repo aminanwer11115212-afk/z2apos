@@ -4,7 +4,8 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
 import { Modal, Field, Input, Btn, PageHeader, SearchBar, EmptyState, useDialog } from "@/components/ui-kit";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { PaymentDialog } from "@/components/PaymentDialog";
+import { Plus, Pencil, Trash2, Wallet, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/customers")({
