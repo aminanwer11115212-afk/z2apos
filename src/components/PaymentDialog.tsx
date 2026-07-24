@@ -57,10 +57,8 @@ export function PaymentDialog({ open, onClose, direction, party, saleId, purchas
   const acc = settings.accounts.find((a) => a.id === accountId);
   const requireRef = method === "bank" && cfg.requireRef;
 
-  const newBalance = Number(party.balance) - (direction === "in" ? amount : amount) * (direction === "in" ? 1 : 1) * (direction === "in" ? 1 : 0)
-    // For "in": customer balance decreases; for "out": supplier balance decreases too.
-    // Both are: balance := balance - amount
-    ;
+  // Both directions decrement the party's ledger balance by `amount`
+  // (customer's debt shrinks or turns into surplus; supplier's debt shrinks likewise).
   const projectedBalance = Number(party.balance) - amount;
 
   const save = useMutation({
