@@ -312,6 +312,17 @@ function NewSale() {
           </div>
         </aside>
       </div>
+
+      <Modal open={custDialog.open} onClose={custDialog.hide} title="عميل جديد"
+        footer={<>
+          <Btn variant="outline" onClick={custDialog.hide}>إلغاء</Btn>
+          <Btn onClick={() => addCustomer.mutate()} disabled={addCustomer.isPending || !newCust.name.trim()}>حفظ</Btn>
+        </>}>
+        <div className="space-y-3">
+          <Field label="الاسم *"><Input value={newCust.name} onChange={(e) => setNewCust({ ...newCust, name: e.target.value })} autoFocus /></Field>
+          <Field label="الهاتف"><Input value={newCust.phone} onChange={(e) => setNewCust({ ...newCust, phone: e.target.value })} dir="ltr" className="text-right" /></Field>
+        </div>
+      </Modal>
     </div>
   );
 }
