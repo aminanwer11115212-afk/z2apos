@@ -170,7 +170,7 @@ function NewSale() {
   const save = useMutation({
     mutationFn: async () => {
       if (lines.length === 0) throw new Error("لا توجد أصناف");
-      const methodCfg = settings.paymentMethods[paymentMethod];
+      const methodCfg = settings.paymentMethods[paymentMethod as "cash" | "bank"];
       if (methodCfg?.requireRef && !txRef.trim()) throw new Error("رقم العملية مطلوب لهذه الطريقة");
       const { data: userRes } = await supabase.auth.getUser();
       const uid = userRes.user?.id;
