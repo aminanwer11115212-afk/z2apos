@@ -1,12 +1,14 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
 import { useSettings, parseNotes } from "@/lib/settings";
+import { paymentMethodLabel, paymentMethodIcon } from "@/lib/payments";
 import { Btn } from "@/components/ui-kit";
+import { PaymentDialog } from "@/components/PaymentDialog";
 import { Logo } from "@/components/Logo";
-import { Printer, ArrowRight } from "lucide-react";
+import { Printer, ArrowRight, Wallet } from "lucide-react";
 
 
 export const Route = createFileRoute("/_authenticated/sales/$id")({
