@@ -21,6 +21,8 @@ function SuppliersPage() {
   const dialog = useDialog();
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [form, setForm] = useState({ name: "", phone: "", address: "" });
+  const [payFor, setPayFor] = useState<Supplier | null>(null);
+
 
   const { data = [] } = useQuery({
     queryKey: ["suppliers"],
