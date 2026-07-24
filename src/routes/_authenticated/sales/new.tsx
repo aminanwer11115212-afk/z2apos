@@ -36,13 +36,21 @@ function NewSale() {
 
   const bankAccounts = useMemo(() => settings.accounts.filter((a) => a.type === "bank"), [settings.accounts]);
   const cashAccount = useMemo(() => settings.accounts.find((a) => a.type === "cash") ?? settings.accounts[0], [settings.accounts]);
+  const enabledMethods = useMemo(
+    () => (Object.keys(settings.paymentMethods) as ("cash" | "bank")[]).filter((k) => settings.paymentMethods[k].enabled),
+    [settings.paymentMethods],
+  );
+  const initialMethod: PaymentMethod = enabledMethods.includes(settings.defaultMethod)
+    ? settings.defaultMethod : (enabledMethods[0] ?? "cash");
 
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [lines, setLines] = useState<Line[]>([]);
   const [customerId, setCustomerId] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
-  const [bankAccountId, setBankAccountId] = useState<string>(bankAccounts[0]?.id ?? "");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(initialMethod);
+  const [bankAccountId, setBankAccountId] = useState<string>(
+    settings.paymentMethods.bank.defaultAccountId || bankAccounts[0]?.id || ""
+  );
   const [txRef, setTxRef] = useState("");
   const [discount, setDiscount] = useState(0);
   const [paid, setPaid] = useState(0);
