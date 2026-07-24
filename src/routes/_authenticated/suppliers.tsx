@@ -79,6 +79,14 @@ function SuppliersPage() {
                   <td className="p-3" dir="ltr">{s.phone || "—"}</td>
                   <td className={`p-3 font-semibold ${Number(s.balance) > 0 ? "text-destructive" : ""}`}>{formatSDG(s.balance)}</td>
                   <td className="p-3 whitespace-nowrap">
+                    {Number(s.balance) > 0 && (
+                      <button onClick={() => setPayFor(s)} title="سداد"
+                        className="p-2 hover:bg-success/10 text-success rounded-lg"><Wallet className="w-4 h-4" /></button>
+                    )}
+                    {s.phone && (
+                      <a href={`https://wa.me/${s.phone.replace(/[^\d]/g, "")}`} target="_blank" rel="noreferrer"
+                        title="واتساب" className="inline-block p-2 hover:bg-muted rounded-lg"><MessageCircle className="w-4 h-4" /></a>
+                    )}
                     <button onClick={() => openEdit(s)} className="p-2 hover:bg-muted rounded-lg"><Pencil className="w-4 h-4" /></button>
                     <button onClick={() => { if (confirm("حذف هذا المورد؟")) del.mutate(s.id); }}
                       className="p-2 hover:bg-destructive/10 text-destructive rounded-lg"><Trash2 className="w-4 h-4" /></button>
