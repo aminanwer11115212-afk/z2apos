@@ -361,13 +361,44 @@ function NewSale() {
           </div>
 
           <div className="flex gap-2 pt-1">
-            <Btn variant="outline" onClick={() => { setLines([]); setDiscount(0); setPaid(0); setNotes(""); setCustomerId(""); }} className="flex-1 h-9 text-sm">مسح</Btn>
+            <Btn variant="outline" onClick={() => { setLines([]); setDiscount(0); setPaid(0); setNotes(""); setCustomerId(""); }} className="h-9 text-sm px-3">مسح</Btn>
+            <Btn variant="outline" onClick={hold} disabled={lines.length === 0} className="h-9 text-sm px-3" title="F8">
+              <Pause className="w-3.5 h-3.5 inline ml-1" />تعليق
+            </Btn>
             <Btn onClick={() => save.mutate()} disabled={save.isPending || lines.length === 0} className="flex-1 h-9 text-sm">
               حفظ (F9)
             </Btn>
           </div>
         </aside>
       </div>
+
+      <Modal open={holdDialog.open} onClose={holdDialog.hide} title={`فواتير معلّقة (${held.length})`}>
+        {held.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-6">لا توجد فواتير معلّقة</p>
+        ) : (
+          <ul className="space-y-2 max-h-96 overflow-y-auto">
+            {held.map((h) => {
+              const t = h.lines.reduce((s, l) => s + l.qty * l.unit_price, 0);
+              return (
+                <li key={h.id} className="flex items-center justify-between gap-2 border rounded-lg p-2.5 bg-muted/30">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium">{h.lines.length} صنف · {formatSDG(t)}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(h.savedAt).toLocaleString("ar-SD", { dateStyle: "short", timeStyle: "short" })}
+                    </div>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <Btn onClick={() => resume(h)} className="h-8 text-xs px-3">استعادة</Btn>
+                    <button onClick={() => dropHeld(h.id)} className="w-8 h-8 rounded border text-destructive hover:bg-destructive/10">
+                      <Trash2 className="w-3.5 h-3.5 mx-auto" />
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Modal>
 
       <Modal open={custDialog.open} onClose={custDialog.hide} title="عميل جديد"
         footer={<>
