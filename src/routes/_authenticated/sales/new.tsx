@@ -170,6 +170,8 @@ function NewSale() {
   const save = useMutation({
     mutationFn: async () => {
       if (lines.length === 0) throw new Error("لا توجد أصناف");
+      const methodCfg = settings.paymentMethods[paymentMethod];
+      if (methodCfg?.requireRef && !txRef.trim()) throw new Error("رقم العملية مطلوب لهذه الطريقة");
       const { data: userRes } = await supabase.auth.getUser();
       const uid = userRes.user?.id;
       if (!uid) throw new Error("يجب تسجيل الدخول");
@@ -361,14 +363,17 @@ function NewSale() {
           </Field>
 
           <Field label="طريقة الدفع (F7)">
-            <div className="grid grid-cols-2 gap-1">
-              {PAYMENT_METHODS.map((m, i) => (
-                <button key={m.value} type="button" ref={i === 0 ? methodRef : undefined}
-                  onClick={() => setPaymentMethod(m.value)}
-                  className={`h-10 rounded-lg border text-sm font-medium ${paymentMethod === m.value ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
-                  {m.icon} {m.label}
-                </button>
-              ))}
+            <div className={`grid gap-1`} style={{ gridTemplateColumns: `repeat(${Math.max(1, enabledMethods.length)}, minmax(0, 1fr))` }}>
+              {enabledMethods.map((m, i) => {
+                const meta = m === "cash" ? { icon: "💵", label: "نقدي" } : { icon: "🏦", label: "بنكي" };
+                return (
+                  <button key={m} type="button" ref={i === 0 ? methodRef : undefined}
+                    onClick={() => setPaymentMethod(m)}
+                    className={`h-10 rounded-lg border text-sm font-medium ${paymentMethod === m ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
+                    {meta.icon} {meta.label}
+                  </button>
+                );
+              })}
             </div>
           </Field>
 
