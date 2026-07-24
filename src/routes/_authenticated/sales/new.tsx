@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
 import { useSettings, encodeNotes } from "@/lib/settings";
-import { Field, Btn, PageHeader } from "@/components/ui-kit";
-import { Plus, Minus, Trash2, Search, Keyboard } from "lucide-react";
+import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/payments";
+import { Field, Btn, PageHeader, Modal, Input, useDialog } from "@/components/ui-kit";
+import { Plus, Minus, Trash2, Search, Keyboard, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/sales/new")({
@@ -25,12 +26,16 @@ function NewSale() {
   const [lines, setLines] = useState<Line[]>([]);
   const [customerId, setCustomerId] = useState("");
   const [accountId, setAccountId] = useState(settings.defaultAccountId);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [discount, setDiscount] = useState(0);
   const [paid, setPaid] = useState(0);
   const [notes, setNotes] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const customerRef = useRef<HTMLSelectElement>(null);
   const accountRef = useRef<HTMLSelectElement>(null);
+  const methodRef = useRef<HTMLButtonElement>(null);
+  const custDialog = useDialog();
+  const [newCust, setNewCust] = useState({ name: "", phone: "" });
 
   useEffect(() => { searchRef.current?.focus(); }, []);
   useEffect(() => { setAccountId(settings.defaultAccountId); }, [settings.defaultAccountId]);
@@ -45,12 +50,32 @@ function NewSale() {
   });
 
   const { data: customers = [] } = useQuery({
-    queryKey: ["customers-lite"],
+    queryKey: ["customers-lite-phone"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("customers").select("id,name").order("name");
+      const { data, error } = await supabase.from("customers").select("id,name,phone").order("name");
       if (error) throw error;
-      return data as { id: string; name: string }[];
+      return data as { id: string; name: string; phone: string | null }[];
     },
+  });
+
+  const addCustomer = useMutation({
+    mutationFn: async () => {
+      if (!newCust.name.trim()) throw new Error("الاسم مطلوب");
+      const { data, error } = await supabase.from("customers")
+        .insert({ name: newCust.name.trim(), phone: newCust.phone.trim() || null })
+        .select("id").single();
+      if (error) throw error;
+      return data.id as string;
+    },
+    onSuccess: (id) => {
+      toast.success("تمت إضافة العميل");
+      setCustomerId(id);
+      setNewCust({ name: "", phone: "" });
+      custDialog.hide();
+      qc.invalidateQueries({ queryKey: ["customers-lite-phone"] });
+      qc.invalidateQueries({ queryKey: ["customers"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const results = useMemo(() =>
@@ -88,6 +113,8 @@ function NewSale() {
       const { data: sale, error: e1 } = await supabase.from("sales").insert({
         customer_id: customerId || null,
         discount, paid, notes: finalNotes || null, created_by: uid,
+        payment_method: paymentMethod,
+        account_name: paymentMethod === "credit" ? null : (acc?.name ?? null),
       }).select("id, invoice_no").single();
       if (e1) throw e1;
       const items = lines.map((l) => ({ sale_id: sale.id, part_id: l.part.id, qty: l.qty, unit_price: l.unit_price }));
@@ -111,6 +138,7 @@ function NewSale() {
       if (e.key === "F2" || (e.key === "/" && !inField)) { e.preventDefault(); searchRef.current?.focus(); searchRef.current?.select(); }
       else if (e.key === "F4") { e.preventDefault(); customerRef.current?.focus(); }
       else if (e.key === "F6") { e.preventDefault(); accountRef.current?.focus(); }
+      else if (e.key === "F7") { e.preventDefault(); methodRef.current?.focus(); }
       else if (e.key === "F9") { e.preventDefault(); if (lines.length && !save.isPending) save.mutate(); }
       else if (!inField && (e.key === "+" || e.key === "=")) {
         const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part.id, last.qty + 1); }
@@ -134,7 +162,7 @@ function NewSale() {
       <PageHeader title="بيع سريع" actions={
         <div className="hidden md:flex items-center gap-1 text-xs text-muted-foreground">
           <Keyboard className="w-3.5 h-3.5" />
-          <span>F2 بحث · F9 حفظ · F4 عميل · F6 حساب · +/-</span>
+          <span>F2 بحث · F9 حفظ · F4 عميل · F6 حساب · F7 طريقة · +/-</span>
         </div>
       } />
 
@@ -213,21 +241,44 @@ function NewSale() {
 
         <aside className="bg-card border rounded-xl p-3 space-y-2 h-fit lg:sticky lg:top-16 text-sm">
           <Field label="العميل (F4)">
-            <select ref={customerRef} value={customerId} onChange={(e) => setCustomerId(e.target.value)}
-              className="w-full h-10 px-2 rounded-lg border bg-background text-sm">
-              <option value="">— بيع نقدي —</option>
-              {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <div className="flex gap-1">
+              <select ref={customerRef} value={customerId} onChange={(e) => setCustomerId(e.target.value)}
+                className="flex-1 h-10 px-2 rounded-lg border bg-background text-sm">
+                <option value="">— بيع نقدي —</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ""}</option>
+                ))}
+              </select>
+              <button type="button" onClick={() => custDialog.show()}
+                title="عميل جديد سريع"
+                className="w-10 h-10 rounded-lg border hover:bg-muted flex items-center justify-center">
+                <UserPlus className="w-4 h-4" />
+              </button>
+            </div>
           </Field>
 
-          <Field label="الحساب (F6)">
-            <select ref={accountRef} value={accountId} onChange={(e) => setAccountId(e.target.value)}
-              className="w-full h-10 px-2 rounded-lg border bg-background text-sm">
-              {settings.accounts.map((a) => (
-                <option key={a.id} value={a.id}>{a.type === "cash" ? "💵" : "🏦"} {a.name}</option>
+          <Field label="طريقة الدفع (F7)">
+            <div className="grid grid-cols-3 gap-1">
+              {PAYMENT_METHODS.map((m, i) => (
+                <button key={m.value} type="button" ref={i === 0 ? methodRef : undefined}
+                  onClick={() => setPaymentMethod(m.value)}
+                  className={`h-9 rounded-lg border text-xs font-medium ${paymentMethod === m.value ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
+                  {m.icon} {m.label}
+                </button>
               ))}
-            </select>
+            </div>
           </Field>
+
+          {paymentMethod !== "credit" && (
+            <Field label="الحساب (F6)">
+              <select ref={accountRef} value={accountId} onChange={(e) => setAccountId(e.target.value)}
+                className="w-full h-10 px-2 rounded-lg border bg-background text-sm">
+                {settings.accounts.map((a) => (
+                  <option key={a.id} value={a.id}>{a.type === "cash" ? "💵" : "🏦"} {a.name}</option>
+                ))}
+              </select>
+            </Field>
+          )}
 
           <div className="grid grid-cols-2 gap-2">
             <Field label="خصم">
@@ -261,6 +312,17 @@ function NewSale() {
           </div>
         </aside>
       </div>
+
+      <Modal open={custDialog.open} onClose={custDialog.hide} title="عميل جديد"
+        footer={<>
+          <Btn variant="outline" onClick={custDialog.hide}>إلغاء</Btn>
+          <Btn onClick={() => addCustomer.mutate()} disabled={addCustomer.isPending || !newCust.name.trim()}>حفظ</Btn>
+        </>}>
+        <div className="space-y-3">
+          <Field label="الاسم *"><Input value={newCust.name} onChange={(e) => setNewCust({ ...newCust, name: e.target.value })} autoFocus /></Field>
+          <Field label="الهاتف"><Input value={newCust.phone} onChange={(e) => setNewCust({ ...newCust, phone: e.target.value })} dir="ltr" className="text-right" /></Field>
+        </div>
+      </Modal>
     </div>
   );
 }

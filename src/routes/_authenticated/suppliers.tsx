@@ -4,7 +4,8 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
 import { Modal, Field, Input, Btn, PageHeader, SearchBar, EmptyState, useDialog } from "@/components/ui-kit";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { PaymentDialog } from "@/components/PaymentDialog";
+import { Plus, Pencil, Trash2, Wallet, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/suppliers")({
@@ -20,6 +21,8 @@ function SuppliersPage() {
   const dialog = useDialog();
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [form, setForm] = useState({ name: "", phone: "", address: "" });
+  const [payFor, setPayFor] = useState<Supplier | null>(null);
+
 
   const { data = [] } = useQuery({
     queryKey: ["suppliers"],
@@ -76,6 +79,14 @@ function SuppliersPage() {
                   <td className="p-3" dir="ltr">{s.phone || "—"}</td>
                   <td className={`p-3 font-semibold ${Number(s.balance) > 0 ? "text-destructive" : ""}`}>{formatSDG(s.balance)}</td>
                   <td className="p-3 whitespace-nowrap">
+                    {Number(s.balance) > 0 && (
+                      <button onClick={() => setPayFor(s)} title="سداد"
+                        className="p-2 hover:bg-success/10 text-success rounded-lg"><Wallet className="w-4 h-4" /></button>
+                    )}
+                    {s.phone && (
+                      <a href={`https://wa.me/${s.phone.replace(/[^\d]/g, "")}`} target="_blank" rel="noreferrer"
+                        title="واتساب" className="inline-block p-2 hover:bg-muted rounded-lg"><MessageCircle className="w-4 h-4" /></a>
+                    )}
                     <button onClick={() => openEdit(s)} className="p-2 hover:bg-muted rounded-lg"><Pencil className="w-4 h-4" /></button>
                     <button onClick={() => { if (confirm("حذف هذا المورد؟")) del.mutate(s.id); }}
                       className="p-2 hover:bg-destructive/10 text-destructive rounded-lg"><Trash2 className="w-4 h-4" /></button>
@@ -98,6 +109,13 @@ function SuppliersPage() {
           <Field label="العنوان"><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></Field>
         </div>
       </Modal>
+
+      {payFor && (
+        <PaymentDialog open={!!payFor} onClose={() => setPayFor(null)}
+          direction="out"
+          party={{ id: payFor.id, name: payFor.name, balance: Number(payFor.balance) }}
+          suggested={Number(payFor.balance)} />
+      )}
     </div>
   );
 }

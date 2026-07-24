@@ -1,12 +1,14 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
 import { useSettings, parseNotes } from "@/lib/settings";
+import { paymentMethodLabel, paymentMethodIcon } from "@/lib/payments";
 import { Btn } from "@/components/ui-kit";
+import { PaymentDialog } from "@/components/PaymentDialog";
 import { Logo } from "@/components/Logo";
-import { Printer, ArrowRight } from "lucide-react";
+import { Printer, ArrowRight, Wallet } from "lucide-react";
 
 
 export const Route = createFileRoute("/_authenticated/sales/$id")({
@@ -27,7 +29,9 @@ export const Route = createFileRoute("/_authenticated/sales/$id")({
 type SaleFull = {
   id: string; invoice_no: number; total: number; discount: number; paid: number;
   created_at: string; notes: string | null;
-  customers: { name: string; phone: string | null } | null;
+  payment_method: string | null; account_name: string | null;
+  customer_id: string | null;
+  customers: { id: string; name: string; phone: string | null; balance: number } | null;
   sale_items: { id: string; qty: number; unit_price: number; subtotal: number;
     parts: { name: string; sku: string | null } | null }[];
 };
@@ -35,11 +39,12 @@ type SaleFull = {
 function SaleView() {
   const { id } = Route.useParams();
   const settings = useSettings();
+  const [payOpen, setPayOpen] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ["sale", id],
     queryFn: async () => {
       const { data, error } = await supabase.from("sales")
-        .select("id,invoice_no,total,discount,paid,created_at,notes, customers(name,phone), sale_items(id,qty,unit_price,subtotal, parts(name,sku))")
+        .select("id,invoice_no,total,discount,paid,created_at,notes,payment_method,account_name,customer_id, customers(id,name,phone,balance), sale_items(id,qty,unit_price,subtotal, parts(name,sku))")
         .eq("id", id).single();
       if (error) throw error;
       return data as unknown as SaleFull;
@@ -63,11 +68,18 @@ function SaleView() {
 
   return (
     <div className={`p-4 lg:p-6 ${containerMax} mx-auto`}>
-      <div className="flex items-center justify-between mb-4 no-print">
+      <div className="flex items-center justify-between mb-4 no-print gap-2 flex-wrap">
         <Link to="/sales" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
           <ArrowRight className="w-4 h-4" />العودة للفواتير
         </Link>
-        <Btn onClick={() => window.print()}><Printer className="w-4 h-4 inline ml-1" />طباعة / PDF</Btn>
+        <div className="flex gap-2">
+          {due > 0 && data.customers && (
+            <Btn variant="outline" onClick={() => setPayOpen(true)}>
+              <Wallet className="w-4 h-4 inline ml-1" />تحصيل ({formatSDG(due)})
+            </Btn>
+          )}
+          <Btn onClick={() => window.print()}><Printer className="w-4 h-4 inline ml-1" />طباعة / PDF</Btn>
+        </div>
       </div>
 
       <div className={`print-area bg-card border rounded-2xl p-6 shadow-sm ${isThermal ? "text-xs" : ""}`}>
@@ -97,10 +109,16 @@ function SaleView() {
             <div className="font-semibold">{data.customers?.name ?? "نقدي"}</div>
             {data.customers?.phone && <div className="text-xs muted-print text-muted-foreground">{data.customers.phone}</div>}
           </div>
-          {parsed.account && (
+          {(data.account_name || parsed.account) && (
             <div>
               <div className="muted-print text-muted-foreground text-xs">الحساب</div>
-              <div className="font-semibold">{parsed.account}</div>
+              <div className="font-semibold">{data.account_name ?? parsed.account}</div>
+            </div>
+          )}
+          {data.payment_method && (
+            <div>
+              <div className="muted-print text-muted-foreground text-xs">طريقة الدفع</div>
+              <div className="font-semibold">{paymentMethodIcon(data.payment_method)} {paymentMethodLabel(data.payment_method)}</div>
             </div>
           )}
           {parsed.text && (
@@ -154,6 +172,14 @@ function SaleView() {
         </div>
 
       </div>
+
+      {data.customers && (
+        <PaymentDialog open={payOpen} onClose={() => setPayOpen(false)}
+          direction="in"
+          party={{ id: data.customers.id, name: data.customers.name, balance: Number(data.customers.balance) }}
+          saleId={data.id}
+          suggested={due} />
+      )}
     </div>
   );
 }
