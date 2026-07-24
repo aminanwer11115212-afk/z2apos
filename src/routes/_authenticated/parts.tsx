@@ -1,10 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMyRole, formatSDG } from "@/lib/auth";
 import { Modal, Field, Input, Btn, PageHeader, SearchBar, EmptyState, useDialog } from "@/components/ui-kit";
-import { Plus, Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Trash2, AlertTriangle, Barcode as BarcodeIcon } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/parts")({
@@ -90,7 +90,10 @@ function PartsPage() {
   return (
     <div className="p-4 lg:p-6 max-w-6xl mx-auto">
       <PageHeader title="قطع الغيار" subtitle={`${data.length} صنف`}
-        actions={isAdmin && <Btn onClick={openNew}><Plus className="w-4 h-4 inline ml-1" />صنف جديد</Btn>} />
+        actions={<div className="flex gap-2">
+          <Link to="/parts/labels"><Btn variant="outline"><BarcodeIcon className="w-4 h-4 inline ml-1" />باركود</Btn></Link>
+          {isAdmin && <Btn onClick={openNew}><Plus className="w-4 h-4 inline ml-1" />صنف جديد</Btn>}
+        </div>} />
 
       <div className="mb-4"><SearchBar value={q} onChange={setQ} placeholder="بحث بالاسم، الفئة، نوع السيارة..." /></div>
 
