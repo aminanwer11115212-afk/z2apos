@@ -74,12 +74,48 @@ function Reports() {
       if (sellerId) salesQ = salesQ.eq("created_by", sellerId);
       if (customerId) salesQ = salesQ.eq("customer_id", customerId);
       const { data: sales } = await salesQ;
+      const saleIds = (sales ?? []).map((s) => s.id);
 
       const { data: purchases } = await supabase.from("purchases").select("total,paid,created_at").gte("created_at", start).lte("created_at", end);
 
       let partsQ = supabase.from("parts").select("name,category,quantity,cost_price,sell_price,min_quantity");
       if (category) partsQ = partsQ.eq("category", category);
       const { data: parts } = await partsQ;
+
+      // Sale items → top products + COGS (current cost)
+      let items: { qty: number; subtotal: number; parts: { name: string; cost_price: number; category: string | null } | null }[] = [];
+      if (saleIds.length > 0) {
+        const { data: it } = await supabase
+          .from("sale_items")
+          .select("qty,subtotal,parts(name,cost_price,category)")
+          .in("sale_id", saleIds);
+        items = (it ?? []) as unknown as typeof items;
+      }
+      const topMap = new Map<string, { name: string; qty: number; revenue: number }>();
+      let cogs = 0;
+      for (const it of items) {
+        if (category && it.parts?.category !== category) continue;
+        cogs += Number(it.qty) * Number(it.parts?.cost_price ?? 0);
+        const key = it.parts?.name ?? "—";
+        const cur = topMap.get(key) ?? { name: key, qty: 0, revenue: 0 };
+        cur.qty += Number(it.qty);
+        cur.revenue += Number(it.subtotal);
+        topMap.set(key, cur);
+      }
+      const topProducts = Array.from(topMap.values()).sort((a, b) => b.qty - a.qty).slice(0, 10);
+
+      // Payments breakdown by method
+      const { data: payments } = await supabase
+        .from("payments")
+        .select("amount,method,direction")
+        .gte("created_at", start).lte("created_at", end);
+      const methodMap: Record<string, { in: number; out: number }> = {};
+      for (const p of payments ?? []) {
+        const k = p.method ?? "cash";
+        methodMap[k] ??= { in: 0, out: 0 };
+        if (p.direction === "in") methodMap[k].in += Number(p.amount);
+        else methodMap[k].out += Number(p.amount);
+      }
 
       const salesNet = (sales ?? []).reduce((s, r) => s + Number(r.total) - Number(r.discount), 0);
       const salesCollected = (sales ?? []).reduce((s, r) => s + Number(r.paid), 0);
@@ -93,7 +129,7 @@ function Reports() {
         salesCount: sales?.length ?? 0, salesNet, salesCollected,
         purchasesCount: purchases?.length ?? 0, purchasesTotal, purchasesPaid,
         stockValueCost, stockValueSell, stockCount: parts?.length ?? 0, lowStock,
-        sales: sales ?? [], parts: parts ?? [],
+        cogs, profit: salesNet - cogs, topProducts, methodMap,
       };
     },
   });
