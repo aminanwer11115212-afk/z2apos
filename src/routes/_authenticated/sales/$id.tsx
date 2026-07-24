@@ -109,10 +109,16 @@ function SaleView() {
             <div className="font-semibold">{data.customers?.name ?? "نقدي"}</div>
             {data.customers?.phone && <div className="text-xs muted-print text-muted-foreground">{data.customers.phone}</div>}
           </div>
-          {parsed.account && (
+          {(data.account_name || parsed.account) && (
             <div>
               <div className="muted-print text-muted-foreground text-xs">الحساب</div>
-              <div className="font-semibold">{parsed.account}</div>
+              <div className="font-semibold">{data.account_name ?? parsed.account}</div>
+            </div>
+          )}
+          {data.payment_method && (
+            <div>
+              <div className="muted-print text-muted-foreground text-xs">طريقة الدفع</div>
+              <div className="font-semibold">{paymentMethodIcon(data.payment_method)} {paymentMethodLabel(data.payment_method)}</div>
             </div>
           )}
           {parsed.text && (
