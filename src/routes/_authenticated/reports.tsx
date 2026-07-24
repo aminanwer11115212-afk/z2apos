@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
 import { PageHeader, Field, Input, Btn } from "@/components/ui-kit";
 import { Logo } from "@/components/Logo";
+import { paymentMethodLabel } from "@/lib/payments";
 import { Printer, Download } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/reports")({
@@ -136,7 +137,7 @@ function Reports() {
 
   const exportCsv = () => {
     if (!data) return;
-    downloadCSV(`2a-report-${range.from}_${range.to}.csv`, [
+    const rows: (string | number)[][] = [
       ["الفترة", `${range.from} → ${range.to}`],
       [],
       ["ملخص المبيعات"],
@@ -144,6 +145,8 @@ function Reports() {
       ["إجمالي (صافي)", data.salesNet],
       ["المحصّل", data.salesCollected],
       ["المتبقي", data.salesNet - data.salesCollected],
+      ["تكلفة المبيعات", data.cogs],
+      ["إجمالي الربح", data.profit],
       [],
       ["ملخص المشتريات"],
       ["عدد الفواتير", data.purchasesCount],
@@ -156,7 +159,16 @@ function Reports() {
       ["منخفضة", data.lowStock],
       ["القيمة بالتكلفة", data.stockValueCost],
       ["القيمة بالبيع", data.stockValueSell],
-    ]);
+      [],
+      ["الأصناف الأكثر مبيعاً"],
+      ["الاسم", "الكمية", "الإيراد"],
+      ...data.topProducts.map((p) => [p.name, p.qty, p.revenue] as (string | number)[]),
+      [],
+      ["الدفعات حسب الطريقة"],
+      ["الطريقة", "تحصيل", "سداد"],
+      ...Object.entries(data.methodMap).map(([m, v]) => [paymentMethodLabel(m), v.in, v.out] as (string | number)[]),
+    ];
+    downloadCSV(`2a-report-${range.from}_${range.to}.csv`, rows);
   };
 
   return (
