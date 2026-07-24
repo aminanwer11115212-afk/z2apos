@@ -165,6 +165,14 @@ function PurchaseView() {
           purchaseId={data.id}
           suggested={due} />
       )}
+
+      <EditInvoiceDialog open={editOpen} onClose={() => setEditOpen(false)}
+        kind="purchase"
+        invoice={{
+          id: data.id, total: Number(data.total),
+          paid: Number(data.paid), payment_method: data.payment_method,
+          account_name: data.account_name, notes: data.notes,
+        }} />
     </div>
   );
 }
