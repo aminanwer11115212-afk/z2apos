@@ -44,7 +44,7 @@ export function Btn({ variant = "primary", ...props }: React.ButtonHTMLAttribute
     ghost: "hover:bg-muted",
     danger: "bg-destructive text-destructive-foreground hover:opacity-90",
   }[variant];
-  return <button {...props} className={`h-10 px-4 rounded-lg font-medium disabled:opacity-50 ${v} ${props.className ?? ""}`} />;
+  return <button type="button" {...props} className={`h-10 px-4 rounded-lg font-medium disabled:opacity-50 ${v} ${props.className ?? ""}`} />;
 }
 
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
