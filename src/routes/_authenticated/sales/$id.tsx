@@ -42,6 +42,7 @@ function SaleView() {
   const { id } = Route.useParams();
   const settings = useSettings();
   const [payOpen, setPayOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ["sale", id],
     queryFn: async () => {
