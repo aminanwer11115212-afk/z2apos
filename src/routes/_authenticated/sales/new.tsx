@@ -162,7 +162,7 @@ function NewSale() {
       <PageHeader title="بيع سريع" actions={
         <div className="hidden md:flex items-center gap-1 text-xs text-muted-foreground">
           <Keyboard className="w-3.5 h-3.5" />
-          <span>F2 بحث · F9 حفظ · F4 عميل · F6 حساب · +/-</span>
+          <span>F2 بحث · F9 حفظ · F4 عميل · F6 حساب · F7 طريقة · +/-</span>
         </div>
       } />
 
