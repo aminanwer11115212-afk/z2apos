@@ -89,6 +89,83 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          account_name: string | null
+          amount: number
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          direction: string
+          id: string
+          method: string
+          notes: string | null
+          purchase_id: string | null
+          sale_id: string | null
+          supplier_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_name?: string | null
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          direction: string
+          id?: string
+          method?: string
+          notes?: string | null
+          purchase_id?: string | null
+          sale_id?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string | null
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          direction?: string
+          id?: string
+          method?: string
+          notes?: string | null
+          purchase_id?: string | null
+          sale_id?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -160,34 +237,40 @@ export type Database = {
       }
       purchases: {
         Row: {
+          account_name: string | null
           created_at: string
           created_by: string | null
           id: string
           invoice_no: number
           notes: string | null
           paid: number
+          payment_method: string
           supplier_id: string | null
           total: number
           updated_at: string
         }
         Insert: {
+          account_name?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
           invoice_no?: number
           notes?: string | null
           paid?: number
+          payment_method?: string
           supplier_id?: string | null
           total?: number
           updated_at?: string
         }
         Update: {
+          account_name?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
           invoice_no?: number
           notes?: string | null
           paid?: number
+          payment_method?: string
           supplier_id?: string | null
           total?: number
           updated_at?: string
@@ -249,6 +332,7 @@ export type Database = {
       }
       sales: {
         Row: {
+          account_name: string | null
           created_at: string
           created_by: string
           customer_id: string | null
@@ -257,10 +341,12 @@ export type Database = {
           invoice_no: number
           notes: string | null
           paid: number
+          payment_method: string
           total: number
           updated_at: string
         }
         Insert: {
+          account_name?: string | null
           created_at?: string
           created_by: string
           customer_id?: string | null
@@ -269,10 +355,12 @@ export type Database = {
           invoice_no?: number
           notes?: string | null
           paid?: number
+          payment_method?: string
           total?: number
           updated_at?: string
         }
         Update: {
+          account_name?: string | null
           created_at?: string
           created_by?: string
           customer_id?: string | null
@@ -281,6 +369,7 @@ export type Database = {
           invoice_no?: number
           notes?: string | null
           paid?: number
+          payment_method?: string
           total?: number
           updated_at?: string
         }
