@@ -5,7 +5,7 @@ import Barcode from "react-barcode";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
 import { useSettings } from "@/lib/settings";
-import { Btn, PageHeader, Field, Input, SearchBar } from "@/components/ui-kit";
+import { Btn, PageHeader, SearchBar } from "@/components/ui-kit";
 import { Printer, ArrowRight, Plus, Minus } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/parts/labels")({
