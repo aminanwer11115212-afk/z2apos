@@ -7,8 +7,10 @@ import { useSettings, parseNotes, computeTax, formatInvoiceNo, renderTemplate } 
 import { paymentMethodLabel, paymentMethodIcon } from "@/lib/payments";
 import { Btn } from "@/components/ui-kit";
 import { PaymentDialog } from "@/components/PaymentDialog";
+import { EditInvoiceDialog } from "@/components/EditInvoiceDialog";
+import { PrintFormatPicker } from "@/components/PrintFormatPicker";
 import { Logo } from "@/components/Logo";
-import { Printer, ArrowRight, Wallet, MessageCircle } from "lucide-react";
+import { ArrowRight, Wallet, MessageCircle, Pencil } from "lucide-react";
 
 
 export const Route = createFileRoute("/_authenticated/sales/$id")({
