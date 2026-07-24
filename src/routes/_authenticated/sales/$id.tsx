@@ -68,11 +68,18 @@ function SaleView() {
 
   return (
     <div className={`p-4 lg:p-6 ${containerMax} mx-auto`}>
-      <div className="flex items-center justify-between mb-4 no-print">
+      <div className="flex items-center justify-between mb-4 no-print gap-2 flex-wrap">
         <Link to="/sales" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
           <ArrowRight className="w-4 h-4" />العودة للفواتير
         </Link>
-        <Btn onClick={() => window.print()}><Printer className="w-4 h-4 inline ml-1" />طباعة / PDF</Btn>
+        <div className="flex gap-2">
+          {due > 0 && data.customers && (
+            <Btn variant="outline" onClick={() => setPayOpen(true)}>
+              <Wallet className="w-4 h-4 inline ml-1" />تحصيل ({formatSDG(due)})
+            </Btn>
+          )}
+          <Btn onClick={() => window.print()}><Printer className="w-4 h-4 inline ml-1" />طباعة / PDF</Btn>
+        </div>
       </div>
 
       <div className={`print-area bg-card border rounded-2xl p-6 shadow-sm ${isThermal ? "text-xs" : ""}`}>
