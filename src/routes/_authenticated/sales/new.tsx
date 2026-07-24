@@ -6,8 +6,13 @@ import { formatSDG, useMyRole } from "@/lib/auth";
 import { useSettings, encodeNotes, computeTax } from "@/lib/settings";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/payments";
 import { Field, Btn, PageHeader, Modal, Input, useDialog } from "@/components/ui-kit";
-import { Plus, Minus, Trash2, Search, Keyboard, UserPlus, Lock } from "lucide-react";
+import { Plus, Minus, Trash2, Search, Keyboard, UserPlus, Lock, Pause, Play } from "lucide-react";
 import { toast } from "sonner";
+
+type HeldSale = { id: string; savedAt: string; lines: Line[]; customerId: string; discount: number; paid: number; notes: string; paymentMethod: PaymentMethod };
+const HOLD_KEY = "2a-held-sales";
+const loadHeld = (): HeldSale[] => { try { return JSON.parse(localStorage.getItem(HOLD_KEY) || "[]"); } catch { return []; } };
+const saveHeld = (list: HeldSale[]) => localStorage.setItem(HOLD_KEY, JSON.stringify(list));
 
 export const Route = createFileRoute("/_authenticated/sales/new")({
   head: () => ({ meta: [{ title: "بيع سريع — 2A" }] }),
@@ -40,7 +45,34 @@ function NewSale() {
   const accountRef = useRef<HTMLSelectElement>(null);
   const methodRef = useRef<HTMLButtonElement>(null);
   const custDialog = useDialog();
+  const holdDialog = useDialog();
   const [newCust, setNewCust] = useState({ name: "", phone: "" });
+  const [held, setHeld] = useState<HeldSale[]>(() => loadHeld());
+
+  const hold = () => {
+    if (lines.length === 0) { toast.error("لا توجد أصناف للتعليق"); return; }
+    const entry: HeldSale = {
+      id: crypto.randomUUID(), savedAt: new Date().toISOString(),
+      lines, customerId, discount, paid, notes, paymentMethod,
+    };
+    const nx = [entry, ...held].slice(0, 20);
+    setHeld(nx); saveHeld(nx);
+    setLines([]); setDiscount(0); setPaid(0); setNotes(""); setCustomerId("");
+    toast.success("تم تعليق الفاتورة");
+    searchRef.current?.focus();
+  };
+  const resume = (h: HeldSale) => {
+    setLines(h.lines); setCustomerId(h.customerId); setDiscount(h.discount);
+    setPaid(h.paid); setNotes(h.notes); setPaymentMethod(h.paymentMethod);
+    const nx = held.filter((x) => x.id !== h.id);
+    setHeld(nx); saveHeld(nx);
+    holdDialog.hide();
+    toast.success("تم استعادة الفاتورة");
+  };
+  const dropHeld = (id: string) => {
+    const nx = held.filter((x) => x.id !== id);
+    setHeld(nx); saveHeld(nx);
+  };
 
   useEffect(() => { searchRef.current?.focus(); }, []);
   useEffect(() => { setAccountId(settings.defaultAccountId); }, [settings.defaultAccountId]);
@@ -149,6 +181,7 @@ function NewSale() {
       else if (e.key === "F6") { e.preventDefault(); accountRef.current?.focus(); }
       else if (e.key === "F7") { e.preventDefault(); methodRef.current?.focus(); }
       else if (e.key === "F9") { e.preventDefault(); if (lines.length && !save.isPending) save.mutate(); }
+      else if (e.key === "F8") { e.preventDefault(); hold(); }
       else if (!inField && (e.key === "+" || e.key === "=")) {
         const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part.id, last.qty + 1); }
       } else if (!inField && (e.key === "-" || e.key === "_")) {
@@ -169,9 +202,16 @@ function NewSale() {
   return (
     <div className="p-3 lg:p-4 max-w-6xl mx-auto">
       <PageHeader title="بيع سريع" actions={
-        <div className="hidden md:flex items-center gap-1 text-xs text-muted-foreground">
-          <Keyboard className="w-3.5 h-3.5" />
-          <span>F2 بحث · F9 حفظ · F4 عميل · F6 حساب · F7 طريقة · +/-</span>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => holdDialog.show()}
+            className="relative h-8 px-2.5 rounded-lg border text-xs font-medium hover:bg-muted flex items-center gap-1">
+            <Play className="w-3.5 h-3.5" />المعلّقة
+            {held.length > 0 && <span className="min-w-5 h-5 px-1 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold">{held.length}</span>}
+          </button>
+          <div className="hidden md:flex items-center gap-1 text-xs text-muted-foreground">
+            <Keyboard className="w-3.5 h-3.5" />
+            <span>F2 بحث · F8 تعليق · F9 حفظ · +/-</span>
+          </div>
         </div>
       } />
 
@@ -321,13 +361,44 @@ function NewSale() {
           </div>
 
           <div className="flex gap-2 pt-1">
-            <Btn variant="outline" onClick={() => { setLines([]); setDiscount(0); setPaid(0); setNotes(""); setCustomerId(""); }} className="flex-1 h-9 text-sm">مسح</Btn>
+            <Btn variant="outline" onClick={() => { setLines([]); setDiscount(0); setPaid(0); setNotes(""); setCustomerId(""); }} className="h-9 text-sm px-3">مسح</Btn>
+            <Btn variant="outline" onClick={hold} disabled={lines.length === 0} className="h-9 text-sm px-3" title="F8">
+              <Pause className="w-3.5 h-3.5 inline ml-1" />تعليق
+            </Btn>
             <Btn onClick={() => save.mutate()} disabled={save.isPending || lines.length === 0} className="flex-1 h-9 text-sm">
               حفظ (F9)
             </Btn>
           </div>
         </aside>
       </div>
+
+      <Modal open={holdDialog.open} onClose={holdDialog.hide} title={`فواتير معلّقة (${held.length})`}>
+        {held.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-6">لا توجد فواتير معلّقة</p>
+        ) : (
+          <ul className="space-y-2 max-h-96 overflow-y-auto">
+            {held.map((h) => {
+              const t = h.lines.reduce((s, l) => s + l.qty * l.unit_price, 0);
+              return (
+                <li key={h.id} className="flex items-center justify-between gap-2 border rounded-lg p-2.5 bg-muted/30">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium">{h.lines.length} صنف · {formatSDG(t)}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(h.savedAt).toLocaleString("ar-SD", { dateStyle: "short", timeStyle: "short" })}
+                    </div>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <Btn onClick={() => resume(h)} className="h-8 text-xs px-3">استعادة</Btn>
+                    <button onClick={() => dropHeld(h.id)} className="w-8 h-8 rounded border text-destructive hover:bg-destructive/10">
+                      <Trash2 className="w-3.5 h-3.5 mx-auto" />
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Modal>
 
       <Modal open={custDialog.open} onClose={custDialog.hide} title="عميل جديد"
         footer={<>
