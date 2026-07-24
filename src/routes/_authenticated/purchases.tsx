@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,7 +58,7 @@ function PurchasesPage() {
                 const due = Number(p.total) - Number(p.paid);
                 return (
                   <tr key={p.id} className="border-t hover:bg-muted/50">
-                    <td className="p-3 font-mono">{p.invoice_no}</td>
+                    <td className="p-3 font-mono"><Link to="/purchases/$id" params={{ id: p.id }} className="text-primary hover:underline">{p.invoice_no}</Link></td>
                     <td className="p-3 text-muted-foreground">{new Date(p.created_at).toLocaleString("ar-SD", { dateStyle: "short", timeStyle: "short" })}</td>
                     <td className="p-3">{p.suppliers?.name ?? "—"}</td>
                     <td className="p-3 font-semibold">{formatSDG(p.total)}</td>

@@ -22,8 +22,12 @@ import { Route as AuthenticatedDataRouteImport } from './routes/_authenticated/d
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCustomersRouteImport } from './routes/_authenticated/customers'
 import { Route as AuthenticatedSalesIndexRouteImport } from './routes/_authenticated/sales/index'
+import { Route as AuthenticatedSuppliersIdRouteImport } from './routes/_authenticated/suppliers.$id'
 import { Route as AuthenticatedSalesNewRouteImport } from './routes/_authenticated/sales/new'
 import { Route as AuthenticatedSalesIdRouteImport } from './routes/_authenticated/sales/$id'
+import { Route as AuthenticatedPurchasesIdRouteImport } from './routes/_authenticated/purchases.$id'
+import { Route as AuthenticatedPartsLabelsRouteImport } from './routes/_authenticated/parts.labels'
+import { Route as AuthenticatedCustomersIdRouteImport } from './routes/_authenticated/customers.$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -89,6 +93,12 @@ const AuthenticatedSalesIndexRoute = AuthenticatedSalesIndexRouteImport.update({
   path: '/sales/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSuppliersIdRoute =
+  AuthenticatedSuppliersIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedSuppliersRoute,
+  } as any)
 const AuthenticatedSalesNewRoute = AuthenticatedSalesNewRouteImport.update({
   id: '/sales/new',
   path: '/sales/new',
@@ -99,37 +109,63 @@ const AuthenticatedSalesIdRoute = AuthenticatedSalesIdRouteImport.update({
   path: '/sales/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPurchasesIdRoute =
+  AuthenticatedPurchasesIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedPurchasesRoute,
+  } as any)
+const AuthenticatedPartsLabelsRoute =
+  AuthenticatedPartsLabelsRouteImport.update({
+    id: '/labels',
+    path: '/labels',
+    getParentRoute: () => AuthenticatedPartsRoute,
+  } as any)
+const AuthenticatedCustomersIdRoute =
+  AuthenticatedCustomersIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedCustomersRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/customers': typeof AuthenticatedCustomersRoute
+  '/customers': typeof AuthenticatedCustomersRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/data': typeof AuthenticatedDataRoute
-  '/parts': typeof AuthenticatedPartsRoute
-  '/purchases': typeof AuthenticatedPurchasesRoute
+  '/parts': typeof AuthenticatedPartsRouteWithChildren
+  '/purchases': typeof AuthenticatedPurchasesRouteWithChildren
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
-  '/suppliers': typeof AuthenticatedSuppliersRoute
+  '/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
+  '/customers/$id': typeof AuthenticatedCustomersIdRoute
+  '/parts/labels': typeof AuthenticatedPartsLabelsRoute
+  '/purchases/$id': typeof AuthenticatedPurchasesIdRoute
   '/sales/$id': typeof AuthenticatedSalesIdRoute
   '/sales/new': typeof AuthenticatedSalesNewRoute
+  '/suppliers/$id': typeof AuthenticatedSuppliersIdRoute
   '/sales/': typeof AuthenticatedSalesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/customers': typeof AuthenticatedCustomersRoute
+  '/customers': typeof AuthenticatedCustomersRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/data': typeof AuthenticatedDataRoute
-  '/parts': typeof AuthenticatedPartsRoute
-  '/purchases': typeof AuthenticatedPurchasesRoute
+  '/parts': typeof AuthenticatedPartsRouteWithChildren
+  '/purchases': typeof AuthenticatedPurchasesRouteWithChildren
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
-  '/suppliers': typeof AuthenticatedSuppliersRoute
+  '/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
+  '/customers/$id': typeof AuthenticatedCustomersIdRoute
+  '/parts/labels': typeof AuthenticatedPartsLabelsRoute
+  '/purchases/$id': typeof AuthenticatedPurchasesIdRoute
   '/sales/$id': typeof AuthenticatedSalesIdRoute
   '/sales/new': typeof AuthenticatedSalesNewRoute
+  '/suppliers/$id': typeof AuthenticatedSuppliersIdRoute
   '/sales': typeof AuthenticatedSalesIndexRoute
 }
 export interface FileRoutesById {
@@ -137,17 +173,21 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/_authenticated/customers': typeof AuthenticatedCustomersRoute
+  '/_authenticated/customers': typeof AuthenticatedCustomersRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/data': typeof AuthenticatedDataRoute
-  '/_authenticated/parts': typeof AuthenticatedPartsRoute
-  '/_authenticated/purchases': typeof AuthenticatedPurchasesRoute
+  '/_authenticated/parts': typeof AuthenticatedPartsRouteWithChildren
+  '/_authenticated/purchases': typeof AuthenticatedPurchasesRouteWithChildren
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
-  '/_authenticated/suppliers': typeof AuthenticatedSuppliersRoute
+  '/_authenticated/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
   '/_authenticated/users': typeof AuthenticatedUsersRoute
+  '/_authenticated/customers/$id': typeof AuthenticatedCustomersIdRoute
+  '/_authenticated/parts/labels': typeof AuthenticatedPartsLabelsRoute
+  '/_authenticated/purchases/$id': typeof AuthenticatedPurchasesIdRoute
   '/_authenticated/sales/$id': typeof AuthenticatedSalesIdRoute
   '/_authenticated/sales/new': typeof AuthenticatedSalesNewRoute
+  '/_authenticated/suppliers/$id': typeof AuthenticatedSuppliersIdRoute
   '/_authenticated/sales/': typeof AuthenticatedSalesIndexRoute
 }
 export interface FileRouteTypes {
@@ -164,8 +204,12 @@ export interface FileRouteTypes {
     | '/settings'
     | '/suppliers'
     | '/users'
+    | '/customers/$id'
+    | '/parts/labels'
+    | '/purchases/$id'
     | '/sales/$id'
     | '/sales/new'
+    | '/suppliers/$id'
     | '/sales/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -180,8 +224,12 @@ export interface FileRouteTypes {
     | '/settings'
     | '/suppliers'
     | '/users'
+    | '/customers/$id'
+    | '/parts/labels'
+    | '/purchases/$id'
     | '/sales/$id'
     | '/sales/new'
+    | '/suppliers/$id'
     | '/sales'
   id:
     | '__root__'
@@ -197,8 +245,12 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/suppliers'
     | '/_authenticated/users'
+    | '/_authenticated/customers/$id'
+    | '/_authenticated/parts/labels'
+    | '/_authenticated/purchases/$id'
     | '/_authenticated/sales/$id'
     | '/_authenticated/sales/new'
+    | '/_authenticated/suppliers/$id'
     | '/_authenticated/sales/'
   fileRoutesById: FileRoutesById
 }
@@ -301,6 +353,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSalesIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/suppliers/$id': {
+      id: '/_authenticated/suppliers/$id'
+      path: '/$id'
+      fullPath: '/suppliers/$id'
+      preLoaderRoute: typeof AuthenticatedSuppliersIdRouteImport
+      parentRoute: typeof AuthenticatedSuppliersRoute
+    }
     '/_authenticated/sales/new': {
       id: '/_authenticated/sales/new'
       path: '/sales/new'
@@ -315,18 +374,92 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSalesIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/purchases/$id': {
+      id: '/_authenticated/purchases/$id'
+      path: '/$id'
+      fullPath: '/purchases/$id'
+      preLoaderRoute: typeof AuthenticatedPurchasesIdRouteImport
+      parentRoute: typeof AuthenticatedPurchasesRoute
+    }
+    '/_authenticated/parts/labels': {
+      id: '/_authenticated/parts/labels'
+      path: '/labels'
+      fullPath: '/parts/labels'
+      preLoaderRoute: typeof AuthenticatedPartsLabelsRouteImport
+      parentRoute: typeof AuthenticatedPartsRoute
+    }
+    '/_authenticated/customers/$id': {
+      id: '/_authenticated/customers/$id'
+      path: '/$id'
+      fullPath: '/customers/$id'
+      preLoaderRoute: typeof AuthenticatedCustomersIdRouteImport
+      parentRoute: typeof AuthenticatedCustomersRoute
+    }
   }
 }
 
+interface AuthenticatedCustomersRouteChildren {
+  AuthenticatedCustomersIdRoute: typeof AuthenticatedCustomersIdRoute
+}
+
+const AuthenticatedCustomersRouteChildren: AuthenticatedCustomersRouteChildren =
+  {
+    AuthenticatedCustomersIdRoute: AuthenticatedCustomersIdRoute,
+  }
+
+const AuthenticatedCustomersRouteWithChildren =
+  AuthenticatedCustomersRoute._addFileChildren(
+    AuthenticatedCustomersRouteChildren,
+  )
+
+interface AuthenticatedPartsRouteChildren {
+  AuthenticatedPartsLabelsRoute: typeof AuthenticatedPartsLabelsRoute
+}
+
+const AuthenticatedPartsRouteChildren: AuthenticatedPartsRouteChildren = {
+  AuthenticatedPartsLabelsRoute: AuthenticatedPartsLabelsRoute,
+}
+
+const AuthenticatedPartsRouteWithChildren =
+  AuthenticatedPartsRoute._addFileChildren(AuthenticatedPartsRouteChildren)
+
+interface AuthenticatedPurchasesRouteChildren {
+  AuthenticatedPurchasesIdRoute: typeof AuthenticatedPurchasesIdRoute
+}
+
+const AuthenticatedPurchasesRouteChildren: AuthenticatedPurchasesRouteChildren =
+  {
+    AuthenticatedPurchasesIdRoute: AuthenticatedPurchasesIdRoute,
+  }
+
+const AuthenticatedPurchasesRouteWithChildren =
+  AuthenticatedPurchasesRoute._addFileChildren(
+    AuthenticatedPurchasesRouteChildren,
+  )
+
+interface AuthenticatedSuppliersRouteChildren {
+  AuthenticatedSuppliersIdRoute: typeof AuthenticatedSuppliersIdRoute
+}
+
+const AuthenticatedSuppliersRouteChildren: AuthenticatedSuppliersRouteChildren =
+  {
+    AuthenticatedSuppliersIdRoute: AuthenticatedSuppliersIdRoute,
+  }
+
+const AuthenticatedSuppliersRouteWithChildren =
+  AuthenticatedSuppliersRoute._addFileChildren(
+    AuthenticatedSuppliersRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedCustomersRoute: typeof AuthenticatedCustomersRoute
+  AuthenticatedCustomersRoute: typeof AuthenticatedCustomersRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDataRoute: typeof AuthenticatedDataRoute
-  AuthenticatedPartsRoute: typeof AuthenticatedPartsRoute
-  AuthenticatedPurchasesRoute: typeof AuthenticatedPurchasesRoute
+  AuthenticatedPartsRoute: typeof AuthenticatedPartsRouteWithChildren
+  AuthenticatedPurchasesRoute: typeof AuthenticatedPurchasesRouteWithChildren
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
-  AuthenticatedSuppliersRoute: typeof AuthenticatedSuppliersRoute
+  AuthenticatedSuppliersRoute: typeof AuthenticatedSuppliersRouteWithChildren
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
   AuthenticatedSalesIdRoute: typeof AuthenticatedSalesIdRoute
   AuthenticatedSalesNewRoute: typeof AuthenticatedSalesNewRoute
@@ -334,14 +467,14 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedCustomersRoute: AuthenticatedCustomersRoute,
+  AuthenticatedCustomersRoute: AuthenticatedCustomersRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDataRoute: AuthenticatedDataRoute,
-  AuthenticatedPartsRoute: AuthenticatedPartsRoute,
-  AuthenticatedPurchasesRoute: AuthenticatedPurchasesRoute,
+  AuthenticatedPartsRoute: AuthenticatedPartsRouteWithChildren,
+  AuthenticatedPurchasesRoute: AuthenticatedPurchasesRouteWithChildren,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
-  AuthenticatedSuppliersRoute: AuthenticatedSuppliersRoute,
+  AuthenticatedSuppliersRoute: AuthenticatedSuppliersRouteWithChildren,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
   AuthenticatedSalesIdRoute: AuthenticatedSalesIdRoute,
   AuthenticatedSalesNewRoute: AuthenticatedSalesNewRoute,

@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
 import { PageHeader, Field, Input, Btn } from "@/components/ui-kit";
 import { Logo } from "@/components/Logo";
+import { paymentMethodLabel } from "@/lib/payments";
 import { Printer, Download } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/reports")({
@@ -74,12 +75,48 @@ function Reports() {
       if (sellerId) salesQ = salesQ.eq("created_by", sellerId);
       if (customerId) salesQ = salesQ.eq("customer_id", customerId);
       const { data: sales } = await salesQ;
+      const saleIds = (sales ?? []).map((s) => s.id);
 
       const { data: purchases } = await supabase.from("purchases").select("total,paid,created_at").gte("created_at", start).lte("created_at", end);
 
       let partsQ = supabase.from("parts").select("name,category,quantity,cost_price,sell_price,min_quantity");
       if (category) partsQ = partsQ.eq("category", category);
       const { data: parts } = await partsQ;
+
+      // Sale items → top products + COGS (current cost)
+      let items: { qty: number; subtotal: number; parts: { name: string; cost_price: number; category: string | null } | null }[] = [];
+      if (saleIds.length > 0) {
+        const { data: it } = await supabase
+          .from("sale_items")
+          .select("qty,subtotal,parts(name,cost_price,category)")
+          .in("sale_id", saleIds);
+        items = (it ?? []) as unknown as typeof items;
+      }
+      const topMap = new Map<string, { name: string; qty: number; revenue: number }>();
+      let cogs = 0;
+      for (const it of items) {
+        if (category && it.parts?.category !== category) continue;
+        cogs += Number(it.qty) * Number(it.parts?.cost_price ?? 0);
+        const key = it.parts?.name ?? "—";
+        const cur = topMap.get(key) ?? { name: key, qty: 0, revenue: 0 };
+        cur.qty += Number(it.qty);
+        cur.revenue += Number(it.subtotal);
+        topMap.set(key, cur);
+      }
+      const topProducts = Array.from(topMap.values()).sort((a, b) => b.qty - a.qty).slice(0, 10);
+
+      // Payments breakdown by method
+      const { data: payments } = await supabase
+        .from("payments")
+        .select("amount,method,direction")
+        .gte("created_at", start).lte("created_at", end);
+      const methodMap: Record<string, { in: number; out: number }> = {};
+      for (const p of payments ?? []) {
+        const k = p.method ?? "cash";
+        methodMap[k] ??= { in: 0, out: 0 };
+        if (p.direction === "in") methodMap[k].in += Number(p.amount);
+        else methodMap[k].out += Number(p.amount);
+      }
 
       const salesNet = (sales ?? []).reduce((s, r) => s + Number(r.total) - Number(r.discount), 0);
       const salesCollected = (sales ?? []).reduce((s, r) => s + Number(r.paid), 0);
@@ -93,14 +130,14 @@ function Reports() {
         salesCount: sales?.length ?? 0, salesNet, salesCollected,
         purchasesCount: purchases?.length ?? 0, purchasesTotal, purchasesPaid,
         stockValueCost, stockValueSell, stockCount: parts?.length ?? 0, lowStock,
-        sales: sales ?? [], parts: parts ?? [],
+        cogs, profit: salesNet - cogs, topProducts, methodMap,
       };
     },
   });
 
   const exportCsv = () => {
     if (!data) return;
-    downloadCSV(`2a-report-${range.from}_${range.to}.csv`, [
+    const rows: (string | number)[][] = [
       ["الفترة", `${range.from} → ${range.to}`],
       [],
       ["ملخص المبيعات"],
@@ -108,6 +145,8 @@ function Reports() {
       ["إجمالي (صافي)", data.salesNet],
       ["المحصّل", data.salesCollected],
       ["المتبقي", data.salesNet - data.salesCollected],
+      ["تكلفة المبيعات", data.cogs],
+      ["إجمالي الربح", data.profit],
       [],
       ["ملخص المشتريات"],
       ["عدد الفواتير", data.purchasesCount],
@@ -120,7 +159,16 @@ function Reports() {
       ["منخفضة", data.lowStock],
       ["القيمة بالتكلفة", data.stockValueCost],
       ["القيمة بالبيع", data.stockValueSell],
-    ]);
+      [],
+      ["الأصناف الأكثر مبيعاً"],
+      ["الاسم", "الكمية", "الإيراد"],
+      ...data.topProducts.map((p) => [p.name, p.qty, p.revenue] as (string | number)[]),
+      [],
+      ["الدفعات حسب الطريقة"],
+      ["الطريقة", "تحصيل", "سداد"],
+      ...Object.entries(data.methodMap).map(([m, v]) => [paymentMethodLabel(m), v.in, v.out] as (string | number)[]),
+    ];
+    downloadCSV(`2a-report-${range.from}_${range.to}.csv`, rows);
   };
 
   return (
@@ -197,6 +245,57 @@ function Reports() {
           <Stat label="المحصّل" value={formatSDG(data?.salesCollected ?? 0)} />
           <Stat label="المتبقي" value={formatSDG((data?.salesNet ?? 0) - (data?.salesCollected ?? 0))} highlight />
         </Section>
+
+        <Section title="الربحية">
+          <Stat label="الإيراد (صافي)" value={formatSDG(data?.salesNet ?? 0)} />
+          <Stat label="تكلفة المبيعات" value={formatSDG(data?.cogs ?? 0)} />
+          <Stat label="إجمالي الربح" value={formatSDG(data?.profit ?? 0)} highlight />
+          <Stat label="هامش الربح" value={`${data && data.salesNet ? Math.round((data.profit / data.salesNet) * 100) : 0}%`} />
+        </Section>
+
+        <div className="bg-card border rounded-2xl p-4">
+          <h2 className="font-bold mb-3">الأصناف الأكثر مبيعاً</h2>
+          {!data?.topProducts?.length ? (
+            <p className="text-sm text-muted-foreground">لا توجد بيانات</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="text-xs muted-print text-muted-foreground border-b">
+                <tr><th className="text-right py-2">الاسم</th><th className="text-center py-2">الكمية</th><th className="text-left py-2">الإيراد</th></tr>
+              </thead>
+              <tbody className="divide-y">
+                {data.topProducts.map((p) => (
+                  <tr key={p.name}>
+                    <td className="py-2">{p.name}</td>
+                    <td className="py-2 text-center">{p.qty}</td>
+                    <td className="py-2 text-left font-semibold">{formatSDG(p.revenue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="bg-card border rounded-2xl p-4">
+          <h2 className="font-bold mb-3">الدفعات حسب الطريقة</h2>
+          {!data || Object.keys(data.methodMap).length === 0 ? (
+            <p className="text-sm text-muted-foreground">لا توجد دفعات</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="text-xs muted-print text-muted-foreground border-b">
+                <tr><th className="text-right py-2">الطريقة</th><th className="text-center py-2">تحصيل</th><th className="text-left py-2">سداد</th></tr>
+              </thead>
+              <tbody className="divide-y">
+                {Object.entries(data.methodMap).map(([m, v]) => (
+                  <tr key={m}>
+                    <td className="py-2">{paymentMethodLabel(m)}</td>
+                    <td className="py-2 text-center text-success font-semibold">{formatSDG(v.in)}</td>
+                    <td className="py-2 text-left text-destructive font-semibold">{formatSDG(v.out)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
 
         <Section title="المشتريات">
           <Stat label="عدد الفواتير" value={String(data?.purchasesCount ?? 0)} />
