@@ -7,8 +7,10 @@ import { useSettings } from "@/lib/settings";
 import { paymentMethodLabel, paymentMethodIcon } from "@/lib/payments";
 import { Btn } from "@/components/ui-kit";
 import { PaymentDialog } from "@/components/PaymentDialog";
+import { EditInvoiceDialog } from "@/components/EditInvoiceDialog";
+import { PrintFormatPicker } from "@/components/PrintFormatPicker";
 import { Logo } from "@/components/Logo";
-import { Printer, ArrowRight, Wallet } from "lucide-react";
+import { ArrowRight, Wallet, Pencil } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/purchases/$id")({
   head: () => ({ meta: [{ title: "فاتورة شراء — 2A" }] }),
