@@ -45,7 +45,34 @@ function NewSale() {
   const accountRef = useRef<HTMLSelectElement>(null);
   const methodRef = useRef<HTMLButtonElement>(null);
   const custDialog = useDialog();
+  const holdDialog = useDialog();
   const [newCust, setNewCust] = useState({ name: "", phone: "" });
+  const [held, setHeld] = useState<HeldSale[]>(() => loadHeld());
+
+  const hold = () => {
+    if (lines.length === 0) { toast.error("لا توجد أصناف للتعليق"); return; }
+    const entry: HeldSale = {
+      id: crypto.randomUUID(), savedAt: new Date().toISOString(),
+      lines, customerId, discount, paid, notes, paymentMethod,
+    };
+    const nx = [entry, ...held].slice(0, 20);
+    setHeld(nx); saveHeld(nx);
+    setLines([]); setDiscount(0); setPaid(0); setNotes(""); setCustomerId("");
+    toast.success("تم تعليق الفاتورة");
+    searchRef.current?.focus();
+  };
+  const resume = (h: HeldSale) => {
+    setLines(h.lines); setCustomerId(h.customerId); setDiscount(h.discount);
+    setPaid(h.paid); setNotes(h.notes); setPaymentMethod(h.paymentMethod);
+    const nx = held.filter((x) => x.id !== h.id);
+    setHeld(nx); saveHeld(nx);
+    holdDialog.hide();
+    toast.success("تم استعادة الفاتورة");
+  };
+  const dropHeld = (id: string) => {
+    const nx = held.filter((x) => x.id !== id);
+    setHeld(nx); saveHeld(nx);
+  };
 
   useEffect(() => { searchRef.current?.focus(); }, []);
   useEffect(() => { setAccountId(settings.defaultAccountId); }, [settings.defaultAccountId]);
