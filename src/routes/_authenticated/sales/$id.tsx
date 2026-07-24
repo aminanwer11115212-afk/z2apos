@@ -172,6 +172,14 @@ function SaleView() {
         </div>
 
       </div>
+
+      {data.customers && (
+        <PaymentDialog open={payOpen} onClose={() => setPayOpen(false)}
+          direction="in"
+          party={{ id: data.customers.id, name: data.customers.name, balance: Number(data.customers.balance) }}
+          saleId={data.id}
+          suggested={due} />
+      )}
     </div>
   );
 }
