@@ -53,7 +53,12 @@ const DEFAULTS: Settings = {
   invoicePrefix: "",
   lowStockDefault: 5,
   defaultAccountId: "cash-default",
-  accounts: [{ id: "cash-default", name: "الصندوق النقدي", type: "cash" }],
+  accounts: [
+    { id: "cash-default", name: "الصندوق النقدي", type: "cash" },
+    { id: "okash", name: "OKash", type: "bank" },
+    { id: "bankak", name: "بنكك", type: "bank" },
+    { id: "fawry", name: "فوري", type: "bank" },
+  ],
   waInvoiceTemplate: "السلام عليكم {name}،\nفاتورتك رقم {invoice} بمبلغ {total} — المتبقي {due}.\nشكراً لتعاملك مع {store}.",
   waReminderTemplate: "السلام عليكم {name}،\nتذكير: عليك مبلغ متبقٍ قدره {balance}.\nنرجو السداد في أقرب فرصة.\n{store}",
   sellerPerms: {
