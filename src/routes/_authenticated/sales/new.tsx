@@ -138,6 +138,7 @@ function NewSale() {
       if (e.key === "F2" || (e.key === "/" && !inField)) { e.preventDefault(); searchRef.current?.focus(); searchRef.current?.select(); }
       else if (e.key === "F4") { e.preventDefault(); customerRef.current?.focus(); }
       else if (e.key === "F6") { e.preventDefault(); accountRef.current?.focus(); }
+      else if (e.key === "F7") { e.preventDefault(); methodRef.current?.focus(); }
       else if (e.key === "F9") { e.preventDefault(); if (lines.length && !save.isPending) save.mutate(); }
       else if (!inField && (e.key === "+" || e.key === "=")) {
         const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part.id, last.qty + 1); }
