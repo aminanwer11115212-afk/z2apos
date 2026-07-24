@@ -3,12 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
-import { useSettings, parseNotes } from "@/lib/settings";
+import { useSettings, parseNotes, computeTax, formatInvoiceNo, renderTemplate } from "@/lib/settings";
 import { paymentMethodLabel, paymentMethodIcon } from "@/lib/payments";
 import { Btn } from "@/components/ui-kit";
 import { PaymentDialog } from "@/components/PaymentDialog";
 import { Logo } from "@/components/Logo";
-import { Printer, ArrowRight, Wallet } from "lucide-react";
+import { Printer, ArrowRight, Wallet, MessageCircle } from "lucide-react";
 
 
 export const Route = createFileRoute("/_authenticated/sales/$id")({
@@ -61,10 +61,27 @@ function SaleView() {
   if (isLoading || !data) return <div className="p-6 text-center text-muted-foreground">جارٍ التحميل…</div>;
 
   const net = Number(data.total) - Number(data.discount);
-  const due = net - Number(data.paid);
+  const tax = computeTax(net, settings);
+  const grand = tax.grand;
+  const due = grand - Number(data.paid);
   const parsed = parseNotes(data.notes);
   const isThermal = settings.printFormat !== "a4";
   const containerMax = isThermal ? "max-w-sm" : "max-w-3xl";
+  const invoiceLabel = formatInvoiceNo(data.invoice_no, settings);
+
+  const shareWhatsApp = () => {
+    const phone = data.customers?.phone?.replace(/[^\d]/g, "");
+    if (!phone) return;
+    const msg = renderTemplate(settings.waInvoiceTemplate, {
+      name: data.customers?.name ?? "",
+      invoice: invoiceLabel,
+      total: formatSDG(grand),
+      due: formatSDG(Math.max(0, due)),
+      store: settings.storeName,
+      balance: formatSDG(Number(data.customers?.balance ?? 0)),
+    });
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank");
+  };
 
   return (
     <div className={`p-4 lg:p-6 ${containerMax} mx-auto`}>
@@ -72,10 +89,15 @@ function SaleView() {
         <Link to="/sales" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
           <ArrowRight className="w-4 h-4" />العودة للفواتير
         </Link>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {due > 0 && data.customers && (
             <Btn variant="outline" onClick={() => setPayOpen(true)}>
               <Wallet className="w-4 h-4 inline ml-1" />تحصيل ({formatSDG(due)})
+            </Btn>
+          )}
+          {data.customers?.phone && (
+            <Btn variant="outline" onClick={shareWhatsApp}>
+              <MessageCircle className="w-4 h-4 inline ml-1" />واتساب
             </Btn>
           )}
           <Btn onClick={() => window.print()}><Printer className="w-4 h-4 inline ml-1" />طباعة / PDF</Btn>
@@ -95,7 +117,7 @@ function SaleView() {
           </div>
           <div className="text-left">
             <div className="text-xs muted-print text-muted-foreground">رقم الفاتورة</div>
-            <div className={`font-bold font-mono ${isThermal ? "text-lg" : "text-2xl"}`}>#{data.invoice_no}</div>
+            <div className={`font-bold font-mono ${isThermal ? "text-lg" : "text-2xl"}`}>{invoiceLabel}</div>
             <div className="text-xs muted-print text-muted-foreground mt-1">
               {new Date(data.created_at).toLocaleString("ar-SD", { dateStyle: "medium", timeStyle: "short" })}
             </div>
@@ -161,6 +183,12 @@ function SaleView() {
             <Row label="الإجمالي" value={formatSDG(Number(data.total))} />
             <Row label="الخصم" value={formatSDG(Number(data.discount))} />
             <Row label="الصافي" value={formatSDG(net)} strong />
+            {settings.taxEnabled && settings.taxPercent > 0 && (
+              <>
+                <Row label={`الضريبة (${settings.taxPercent}%)`} value={formatSDG(tax.amount)} />
+                <Row label="الإجمالي شامل الضريبة" value={formatSDG(grand)} strong />
+              </>
+            )}
             <Row label="المدفوع" value={formatSDG(Number(data.paid))} />
             <Row label="المتبقي" value={formatSDG(due)} strong />
           </div>
