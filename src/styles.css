@@ -114,6 +114,14 @@
   html, body { background: #ffffff !important; color: #0f172a !important; }
   .no-print { display: none !important; }
   .print-only { display: block !important; }
+  /* Hide app chrome (header, sidebar, bottom nav, mobile drawer) during printing
+     so only the invoice / .print-area is sent to the printer. */
+  body > div > header,
+  body > div > div > aside,
+  body > div > nav,
+  body > div > div > div.lg\:hidden { display: none !important; }
+  main { padding: 0 !important; margin: 0 !important; }
+  main > div { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
   .print-area {
     box-shadow: none !important; border: none !important;
     background: #ffffff !important; color: #0f172a !important;
