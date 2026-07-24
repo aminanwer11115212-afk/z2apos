@@ -29,7 +29,9 @@ export const Route = createFileRoute("/_authenticated/sales/$id")({
 type SaleFull = {
   id: string; invoice_no: number; total: number; discount: number; paid: number;
   created_at: string; notes: string | null;
-  customers: { name: string; phone: string | null } | null;
+  payment_method: string | null; account_name: string | null;
+  customer_id: string | null;
+  customers: { id: string; name: string; phone: string | null; balance: number } | null;
   sale_items: { id: string; qty: number; unit_price: number; subtotal: number;
     parts: { name: string; sku: string | null } | null }[];
 };
