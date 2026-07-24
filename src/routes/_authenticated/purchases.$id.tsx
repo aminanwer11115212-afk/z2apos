@@ -31,6 +31,7 @@ function PurchaseView() {
   const { id } = Route.useParams();
   const settings = useSettings();
   const [payOpen, setPayOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ["purchase", id],
     queryFn: async () => {
@@ -56,13 +57,21 @@ function PurchaseView() {
         <Link to="/purchases" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
           <ArrowRight className="w-4 h-4" />العودة للفواتير
         </Link>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center flex-wrap">
+          {data.suppliers && Number(data.suppliers.balance) < 0 && (
+            <span className="text-xs px-2 py-1 rounded-full bg-success/10 text-success font-medium">
+              للمورد رصيد مقدم: {formatSDG(Math.abs(Number(data.suppliers.balance)))}
+            </span>
+          )}
+          <Btn variant="outline" onClick={() => setEditOpen(true)}>
+            <Pencil className="w-4 h-4 inline ml-1" />تعديل
+          </Btn>
           {due > 0 && data.suppliers && (
             <Btn variant="outline" onClick={() => setPayOpen(true)}>
               <Wallet className="w-4 h-4 inline ml-1" />سداد ({formatSDG(due)})
             </Btn>
           )}
-          <Btn onClick={() => window.print()}><Printer className="w-4 h-4 inline ml-1" />طباعة / PDF</Btn>
+          <PrintFormatPicker initial={settings.printFormat} />
         </div>
       </div>
 
