@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
 import { useSettings, encodeNotes } from "@/lib/settings";
-import { Field, Btn, PageHeader } from "@/components/ui-kit";
-import { Plus, Minus, Trash2, Search, Keyboard } from "lucide-react";
+import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/payments";
+import { Field, Btn, PageHeader, Modal, Input, useDialog } from "@/components/ui-kit";
+import { Plus, Minus, Trash2, Search, Keyboard, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/sales/new")({
