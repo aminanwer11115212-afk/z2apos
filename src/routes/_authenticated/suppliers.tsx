@@ -109,6 +109,13 @@ function SuppliersPage() {
           <Field label="العنوان"><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></Field>
         </div>
       </Modal>
+
+      {payFor && (
+        <PaymentDialog open={!!payFor} onClose={() => setPayFor(null)}
+          direction="out"
+          party={{ id: payFor.id, name: payFor.name, balance: Number(payFor.balance) }}
+          suggested={Number(payFor.balance)} />
+      )}
     </div>
   );
 }
