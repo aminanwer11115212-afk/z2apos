@@ -143,6 +143,12 @@ function SaleView() {
               <div className="font-semibold">{paymentMethodIcon(data.payment_method)} {paymentMethodLabel(data.payment_method)}</div>
             </div>
           )}
+          {parsed.ref && (
+            <div>
+              <div className="muted-print text-muted-foreground text-xs">رقم العملية</div>
+              <div className="font-semibold font-mono" dir="ltr">{parsed.ref}</div>
+            </div>
+          )}
           {parsed.text && (
             <div className="col-span-2 hide-on-thermal">
               <div className="muted-print text-muted-foreground text-xs">ملاحظات</div>

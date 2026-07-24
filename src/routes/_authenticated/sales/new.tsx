@@ -6,13 +6,15 @@ import { formatSDG, useMyRole } from "@/lib/auth";
 import { useSettings, encodeNotes, computeTax } from "@/lib/settings";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/payments";
 import { Field, Btn, PageHeader, Modal, Input, useDialog } from "@/components/ui-kit";
-import { Plus, Minus, Trash2, Search, Keyboard, UserPlus, Lock, Pause, Play } from "lucide-react";
+import { Plus, Minus, Trash2, Search, Keyboard, UserPlus, Lock, Pause, Play, ChevronRight, ChevronLeft, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
-type HeldSale = { id: string; savedAt: string; lines: Line[]; customerId: string; discount: number; paid: number; notes: string; paymentMethod: PaymentMethod };
+type HeldSale = { id: string; savedAt: string; lines: Line[]; customerId: string; discount: number; paid: number; notes: string; paymentMethod: PaymentMethod; bankAccountId?: string; txRef?: string };
 const HOLD_KEY = "2a-held-sales";
 const loadHeld = (): HeldSale[] => { try { return JSON.parse(localStorage.getItem(HOLD_KEY) || "[]"); } catch { return []; } };
 const saveHeld = (list: HeldSale[]) => localStorage.setItem(HOLD_KEY, JSON.stringify(list));
+
+const PAGE_SIZE = 24;
 
 export const Route = createFileRoute("/_authenticated/sales/new")({
   head: () => ({ meta: [{ title: "بيع سريع — 2A" }] }),
@@ -31,18 +33,22 @@ function NewSale() {
   const perms = settings.sellerPerms;
   const canEditPrice = !isSeller || perms.editPrice;
   const maxDiscPct = isSeller ? perms.maxDiscountPercent : 100;
+
+  const bankAccounts = useMemo(() => settings.accounts.filter((a) => a.type === "bank"), [settings.accounts]);
+  const cashAccount = useMemo(() => settings.accounts.find((a) => a.type === "cash") ?? settings.accounts[0], [settings.accounts]);
+
   const [q, setQ] = useState("");
-  const [hi, setHi] = useState(0);
+  const [page, setPage] = useState(1);
   const [lines, setLines] = useState<Line[]>([]);
   const [customerId, setCustomerId] = useState("");
-  const [accountId, setAccountId] = useState(settings.defaultAccountId);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const [bankAccountId, setBankAccountId] = useState<string>(bankAccounts[0]?.id ?? "");
+  const [txRef, setTxRef] = useState("");
   const [discount, setDiscount] = useState(0);
   const [paid, setPaid] = useState(0);
   const [notes, setNotes] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const customerRef = useRef<HTMLSelectElement>(null);
-  const accountRef = useRef<HTMLSelectElement>(null);
   const methodRef = useRef<HTMLButtonElement>(null);
   const custDialog = useDialog();
   const holdDialog = useDialog();
@@ -53,17 +59,19 @@ function NewSale() {
     if (lines.length === 0) { toast.error("لا توجد أصناف للتعليق"); return; }
     const entry: HeldSale = {
       id: crypto.randomUUID(), savedAt: new Date().toISOString(),
-      lines, customerId, discount, paid, notes, paymentMethod,
+      lines, customerId, discount, paid, notes, paymentMethod, bankAccountId, txRef,
     };
     const nx = [entry, ...held].slice(0, 20);
     setHeld(nx); saveHeld(nx);
-    setLines([]); setDiscount(0); setPaid(0); setNotes(""); setCustomerId("");
+    setLines([]); setDiscount(0); setPaid(0); setNotes(""); setCustomerId(""); setTxRef("");
     toast.success("تم تعليق الفاتورة");
     searchRef.current?.focus();
   };
   const resume = (h: HeldSale) => {
     setLines(h.lines); setCustomerId(h.customerId); setDiscount(h.discount);
     setPaid(h.paid); setNotes(h.notes); setPaymentMethod(h.paymentMethod);
+    if (h.bankAccountId) setBankAccountId(h.bankAccountId);
+    setTxRef(h.txRef ?? "");
     const nx = held.filter((x) => x.id !== h.id);
     setHeld(nx); saveHeld(nx);
     holdDialog.hide();
@@ -75,7 +83,6 @@ function NewSale() {
   };
 
   useEffect(() => { searchRef.current?.focus(); }, []);
-  useEffect(() => { setAccountId(settings.defaultAccountId); }, [settings.defaultAccountId]);
 
   const { data: parts = [] } = useQuery({
     queryKey: ["parts-lite"],
@@ -115,11 +122,20 @@ function NewSale() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const results = useMemo(() =>
-    !q ? [] : parts.filter((p) => p.code.includes(q) || p.name.includes(q)).slice(0, 8),
-    [q, parts]);
+  const filtered = useMemo(() => {
+    if (!q.trim()) return parts;
+    const s = q.trim();
+    return parts.filter((p) => p.code.includes(s) || p.name.includes(s));
+  }, [q, parts]);
 
-  useEffect(() => { setHi(0); }, [q]);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageSafe = Math.min(page, pageCount);
+  const pageItems = useMemo(
+    () => filtered.slice((pageSafe - 1) * PAGE_SIZE, pageSafe * PAGE_SIZE),
+    [filtered, pageSafe]
+  );
+
+  useEffect(() => { setPage(1); }, [q]);
 
   const addPart = (p: Part) => {
     setLines((prev) => {
@@ -127,8 +143,6 @@ function NewSale() {
       if (i >= 0) { const nx = [...prev]; nx[i] = { ...nx[i], qty: nx[i].qty + 1 }; return nx; }
       return [...prev, { part: p, qty: 1, unit_price: Number(p.sell_price) }];
     });
-    setQ("");
-    searchRef.current?.focus();
   };
   const setQty = (id: string, qty: number) =>
     setLines((p) => p.map((l) => l.part.id === id ? { ...l, qty: Math.max(0.01, qty) } : l));
@@ -143,19 +157,24 @@ function NewSale() {
   const tax = computeTax(net, settings);
   const due = Math.max(0, tax.grand - paid);
 
+  const payFull = () => setPaid(tax.grand);
+
   const save = useMutation({
     mutationFn: async () => {
       if (lines.length === 0) throw new Error("لا توجد أصناف");
       const { data: userRes } = await supabase.auth.getUser();
       const uid = userRes.user?.id;
       if (!uid) throw new Error("يجب تسجيل الدخول");
-      const acc = settings.accounts.find((a) => a.id === accountId);
-      const finalNotes = acc ? encodeNotes(acc.name, notes) : notes;
+      const acc = paymentMethod === "bank"
+        ? bankAccounts.find((a) => a.id === bankAccountId)
+        : cashAccount;
+      const ref = paymentMethod === "bank" ? txRef.trim() : "";
+      const finalNotes = acc ? encodeNotes(acc.name, notes, ref) : notes;
       const { data: sale, error: e1 } = await supabase.from("sales").insert({
         customer_id: customerId || null,
         discount: effectiveDiscount, paid, notes: finalNotes || null, created_by: uid,
         payment_method: paymentMethod,
-        account_name: paymentMethod === "credit" ? null : (acc?.name ?? null),
+        account_name: acc?.name ?? null,
       }).select("id, invoice_no").single();
       if (e1) throw e1;
       const items = lines.map((l) => ({ sale_id: sale.id, part_id: l.part.id, qty: l.qty, unit_price: l.unit_price }));
@@ -178,7 +197,6 @@ function NewSale() {
       const inField = tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA";
       if (e.key === "F2" || (e.key === "/" && !inField)) { e.preventDefault(); searchRef.current?.focus(); searchRef.current?.select(); }
       else if (e.key === "F4") { e.preventDefault(); customerRef.current?.focus(); }
-      else if (e.key === "F6") { e.preventDefault(); accountRef.current?.focus(); }
       else if (e.key === "F7") { e.preventDefault(); methodRef.current?.focus(); }
       else if (e.key === "F9") { e.preventDefault(); if (lines.length && !save.isPending) save.mutate(); }
       else if (e.key === "F8") { e.preventDefault(); hold(); }
@@ -193,9 +211,7 @@ function NewSale() {
   }, [lines, save]);
 
   const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "ArrowDown") { e.preventDefault(); setHi((h) => Math.min(results.length - 1, h + 1)); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); setHi((h) => Math.max(0, h - 1)); }
-    else if (e.key === "Enter" && results[hi]) { e.preventDefault(); addPart(results[hi]); }
+    if (e.key === "Enter" && pageItems[0]) { e.preventDefault(); addPart(pageItems[0]); }
     else if (e.key === "Escape") { setQ(""); }
   };
 
@@ -217,33 +233,60 @@ function NewSale() {
 
       <div className="grid lg:grid-cols-[1fr,320px] gap-3">
         <div className="space-y-3">
-          <div className="relative">
-            <div className="flex items-center gap-2 h-11 px-3 rounded-xl border bg-card">
-              <Search className="w-4 h-4 text-muted-foreground" />
-              <input ref={searchRef} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey}
-                placeholder="ابحث بكود القطعة أو اسمها ثم Enter (F2)..."
-                className="flex-1 bg-transparent outline-none text-sm" />
-              {q && <button onClick={() => setQ("")} className="text-xs text-muted-foreground">✕</button>}
-            </div>
-            {results.length > 0 && (
-              <div className="absolute z-10 top-full mt-1 inset-x-0 bg-card border rounded-xl shadow-lg overflow-hidden">
-                {results.map((p, i) => (
-                  <button key={p.id} onMouseDown={(e) => { e.preventDefault(); addPart(p); }} type="button"
-                    className={`w-full text-right px-3 py-2 flex items-center justify-between border-b last:border-0 ${i === hi ? "bg-muted" : "hover:bg-muted/60"}`}>
-                    <div>
-                      <div className="font-medium text-sm">{p.name}</div>
-                      <div className="text-xs text-muted-foreground font-mono">{p.code} · متوفر: {Number(p.quantity)}</div>
-                    </div>
-                    <div className="font-semibold text-primary text-sm">{formatSDG(p.sell_price)}</div>
-                  </button>
-                ))}
-              </div>
+          {/* Search */}
+          <div className="flex items-center gap-2 h-11 px-3 rounded-xl border bg-card">
+            <Search className="w-4 h-4 text-muted-foreground" />
+            <input ref={searchRef} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey}
+              placeholder="ابحث بكود القطعة أو اسمها (F2)..."
+              className="flex-1 bg-transparent outline-none text-sm" />
+            {q && <button onClick={() => setQ("")} className="text-xs text-muted-foreground">✕</button>}
+            <span className="text-xs text-muted-foreground shrink-0">{filtered.length} صنف</span>
+          </div>
+
+          {/* Products grid with pagination */}
+          <div className="bg-card border rounded-xl p-2">
+            {pageItems.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">لا توجد نتائج</div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2">
+                  {pageItems.map((p) => {
+                    const oos = Number(p.quantity) <= 0;
+                    return (
+                      <button key={p.id} type="button" onClick={() => addPart(p)}
+                        className={`text-right p-2 rounded-lg border bg-background hover:bg-muted transition-colors flex flex-col gap-1 ${oos ? "opacity-60" : ""}`}
+                        title={oos ? "غير متوفر" : "إضافة"}>
+                        <div className="text-sm font-medium line-clamp-2 min-h-10 leading-tight">{p.name}</div>
+                        <div className="text-[10px] text-muted-foreground font-mono">{p.code}</div>
+                        <div className="flex items-center justify-between">
+                          <span className={`text-[10px] ${oos ? "text-destructive" : "text-muted-foreground"}`}>متوفر: {Number(p.quantity)}</span>
+                          <span className="text-sm font-semibold text-primary">{formatSDG(p.sell_price)}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                {pageCount > 1 && (
+                  <div className="flex items-center justify-between mt-3 pt-2 border-t text-xs">
+                    <button onClick={() => setPage((n) => Math.max(1, n - 1))} disabled={pageSafe === 1}
+                      className="h-8 px-3 rounded-lg border hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1">
+                      <ChevronRight className="w-3.5 h-3.5" />السابق
+                    </button>
+                    <span className="text-muted-foreground">صفحة {pageSafe} من {pageCount}</span>
+                    <button onClick={() => setPage((n) => Math.min(pageCount, n + 1))} disabled={pageSafe === pageCount}
+                      className="h-8 px-3 rounded-lg border hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1">
+                      التالي<ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
+          {/* Cart lines */}
           <div className="bg-card border rounded-xl overflow-hidden">
             {lines.length === 0 ? (
-              <div className="p-6 text-center text-sm text-muted-foreground">اضغط F2 وابحث عن قطعة للبدء</div>
+              <div className="p-6 text-center text-sm text-muted-foreground">اختر منتجاً من الأعلى للبدء</div>
             ) : (
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 text-xs">
@@ -310,26 +353,34 @@ function NewSale() {
           </Field>
 
           <Field label="طريقة الدفع (F7)">
-            <div className="grid grid-cols-3 gap-1">
+            <div className="grid grid-cols-2 gap-1">
               {PAYMENT_METHODS.map((m, i) => (
                 <button key={m.value} type="button" ref={i === 0 ? methodRef : undefined}
                   onClick={() => setPaymentMethod(m.value)}
-                  className={`h-9 rounded-lg border text-xs font-medium ${paymentMethod === m.value ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
+                  className={`h-10 rounded-lg border text-sm font-medium ${paymentMethod === m.value ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
                   {m.icon} {m.label}
                 </button>
               ))}
             </div>
           </Field>
 
-          {paymentMethod !== "credit" && (
-            <Field label="الحساب (F6)">
-              <select ref={accountRef} value={accountId} onChange={(e) => setAccountId(e.target.value)}
-                className="w-full h-10 px-2 rounded-lg border bg-background text-sm">
-                {settings.accounts.map((a) => (
-                  <option key={a.id} value={a.id}>{a.type === "cash" ? "💵" : "🏦"} {a.name}</option>
-                ))}
-              </select>
-            </Field>
+          {paymentMethod === "bank" && (
+            <>
+              <Field label="الحساب البنكي">
+                <div className="grid grid-cols-3 gap-1">
+                  {bankAccounts.map((a) => (
+                    <button key={a.id} type="button" onClick={() => setBankAccountId(a.id)}
+                      className={`h-9 rounded-lg border text-xs font-medium ${bankAccountId === a.id ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
+                      {a.name}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+              <Field label="رقم العملية">
+                <input value={txRef} onChange={(e) => setTxRef(e.target.value)} placeholder="اختياري"
+                  className="w-full h-10 px-2 rounded-lg border bg-background text-sm font-mono" dir="ltr" />
+              </Field>
+            </>
           )}
 
           <div className="grid grid-cols-2 gap-2">
@@ -343,6 +394,12 @@ function NewSale() {
                 className="w-full h-10 px-2 rounded-lg border bg-background text-sm" />
             </Field>
           </div>
+
+          <button type="button" onClick={payFull} disabled={tax.grand <= 0}
+            className="w-full h-9 rounded-lg border border-success/40 bg-success/10 text-success text-xs font-medium hover:bg-success/20 disabled:opacity-40 flex items-center justify-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5" />دفع كامل ({formatSDG(tax.grand)})
+          </button>
+
           <Field label="ملاحظات">
             <input value={notes} onChange={(e) => setNotes(e.target.value)}
               className="w-full h-10 px-2 rounded-lg border bg-background text-sm" />
@@ -361,7 +418,7 @@ function NewSale() {
           </div>
 
           <div className="flex gap-2 pt-1">
-            <Btn variant="outline" onClick={() => { setLines([]); setDiscount(0); setPaid(0); setNotes(""); setCustomerId(""); }} className="h-9 text-sm px-3">مسح</Btn>
+            <Btn variant="outline" onClick={() => { setLines([]); setDiscount(0); setPaid(0); setNotes(""); setCustomerId(""); setTxRef(""); }} className="h-9 text-sm px-3">مسح</Btn>
             <Btn variant="outline" onClick={hold} disabled={lines.length === 0} className="h-9 text-sm px-3" title="F8">
               <Pause className="w-3.5 h-3.5 inline ml-1" />تعليق
             </Btn>
