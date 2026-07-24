@@ -241,21 +241,44 @@ function NewSale() {
 
         <aside className="bg-card border rounded-xl p-3 space-y-2 h-fit lg:sticky lg:top-16 text-sm">
           <Field label="العميل (F4)">
-            <select ref={customerRef} value={customerId} onChange={(e) => setCustomerId(e.target.value)}
-              className="w-full h-10 px-2 rounded-lg border bg-background text-sm">
-              <option value="">— بيع نقدي —</option>
-              {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <div className="flex gap-1">
+              <select ref={customerRef} value={customerId} onChange={(e) => setCustomerId(e.target.value)}
+                className="flex-1 h-10 px-2 rounded-lg border bg-background text-sm">
+                <option value="">— بيع نقدي —</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ""}</option>
+                ))}
+              </select>
+              <button type="button" onClick={() => custDialog.show()}
+                title="عميل جديد سريع"
+                className="w-10 h-10 rounded-lg border hover:bg-muted flex items-center justify-center">
+                <UserPlus className="w-4 h-4" />
+              </button>
+            </div>
           </Field>
 
-          <Field label="الحساب (F6)">
-            <select ref={accountRef} value={accountId} onChange={(e) => setAccountId(e.target.value)}
-              className="w-full h-10 px-2 rounded-lg border bg-background text-sm">
-              {settings.accounts.map((a) => (
-                <option key={a.id} value={a.id}>{a.type === "cash" ? "💵" : "🏦"} {a.name}</option>
+          <Field label="طريقة الدفع (F7)">
+            <div className="grid grid-cols-3 gap-1">
+              {PAYMENT_METHODS.map((m, i) => (
+                <button key={m.value} type="button" ref={i === 0 ? methodRef : undefined}
+                  onClick={() => setPaymentMethod(m.value)}
+                  className={`h-9 rounded-lg border text-xs font-medium ${paymentMethod === m.value ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
+                  {m.icon} {m.label}
+                </button>
               ))}
-            </select>
+            </div>
           </Field>
+
+          {paymentMethod !== "credit" && (
+            <Field label="الحساب (F6)">
+              <select ref={accountRef} value={accountId} onChange={(e) => setAccountId(e.target.value)}
+                className="w-full h-10 px-2 rounded-lg border bg-background text-sm">
+                {settings.accounts.map((a) => (
+                  <option key={a.id} value={a.id}>{a.type === "cash" ? "💵" : "🏦"} {a.name}</option>
+                ))}
+              </select>
+            </Field>
+          )}
 
           <div className="grid grid-cols-2 gap-2">
             <Field label="خصم">
