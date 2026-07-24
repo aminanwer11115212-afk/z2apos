@@ -6,8 +6,13 @@ import { formatSDG, useMyRole } from "@/lib/auth";
 import { useSettings, encodeNotes, computeTax } from "@/lib/settings";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/payments";
 import { Field, Btn, PageHeader, Modal, Input, useDialog } from "@/components/ui-kit";
-import { Plus, Minus, Trash2, Search, Keyboard, UserPlus, Lock } from "lucide-react";
+import { Plus, Minus, Trash2, Search, Keyboard, UserPlus, Lock, Pause, Play } from "lucide-react";
 import { toast } from "sonner";
+
+type HeldSale = { id: string; savedAt: string; lines: Line[]; customerId: string; discount: number; paid: number; notes: string; paymentMethod: PaymentMethod };
+const HOLD_KEY = "2a-held-sales";
+const loadHeld = (): HeldSale[] => { try { return JSON.parse(localStorage.getItem(HOLD_KEY) || "[]"); } catch { return []; } };
+const saveHeld = (list: HeldSale[]) => localStorage.setItem(HOLD_KEY, JSON.stringify(list));
 
 export const Route = createFileRoute("/_authenticated/sales/new")({
   head: () => ({ meta: [{ title: "بيع سريع — 2A" }] }),
