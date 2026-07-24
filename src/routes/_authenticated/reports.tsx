@@ -172,6 +172,44 @@ function Reports() {
     downloadCSV(`2a-report-${range.from}_${range.to}.csv`, rows);
   };
 
+  const exportXlsx = () => {
+    if (!data) return;
+    const wb = XLSX.utils.book_new();
+    const summary = [
+      ["الفترة", `${range.from} → ${range.to}`],
+      [],
+      ["ملخص المبيعات"],
+      ["عدد الفواتير", data.salesCount],
+      ["الصافي", data.salesNet],
+      ["المحصّل", data.salesCollected],
+      ["المتبقي", data.salesNet - data.salesCollected],
+      ["تكلفة المبيعات", data.cogs],
+      ["إجمالي الربح", data.profit],
+      [],
+      ["ملخص المشتريات"],
+      ["عدد الفواتير", data.purchasesCount],
+      ["الإجمالي", data.purchasesTotal],
+      ["المدفوع", data.purchasesPaid],
+      ["المستحق", data.purchasesTotal - data.purchasesPaid],
+      [],
+      ["المخزون"],
+      ["عدد الأصناف", data.stockCount],
+      ["منخفضة", data.lowStock],
+      ["القيمة بالتكلفة", data.stockValueCost],
+      ["القيمة بالبيع", data.stockValueSell],
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summary), "الملخص");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+      ["الاسم", "الكمية", "الإيراد"],
+      ...data.topProducts.map((p) => [p.name, p.qty, p.revenue]),
+    ]), "الأكثر مبيعاً");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+      ["الطريقة", "تحصيل", "سداد"],
+      ...Object.entries(data.methodMap).map(([m, v]) => [paymentMethodLabel(m), v.in, v.out]),
+    ]), "الدفعات");
+    XLSX.writeFile(wb, `2a-report-${range.from}_${range.to}.xlsx`);
+  };
+
   return (
     <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
       <div className="no-print">
@@ -180,6 +218,7 @@ function Reports() {
           subtitle="ملخص المبيعات والمشتريات والمخزون"
           actions={<div className="flex gap-2">
             <Btn variant="outline" onClick={exportCsv}><Download className="w-4 h-4 inline ml-1" />CSV</Btn>
+            <Btn variant="outline" onClick={exportXlsx}><FileSpreadsheet className="w-4 h-4 inline ml-1" />Excel</Btn>
             <Btn variant="outline" onClick={() => window.print()}><Printer className="w-4 h-4 inline ml-1" />طباعة</Btn>
           </div>}
         />
