@@ -21,6 +21,7 @@ function CustomersPage() {
   const dialog = useDialog();
   const [editing, setEditing] = useState<Customer | null>(null);
   const [form, setForm] = useState({ name: "", phone: "", address: "" });
+  const [payFor, setPayFor] = useState<Customer | null>(null);
 
   const { data = [] } = useQuery({
     queryKey: ["customers"],
