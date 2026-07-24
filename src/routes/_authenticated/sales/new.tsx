@@ -202,9 +202,16 @@ function NewSale() {
   return (
     <div className="p-3 lg:p-4 max-w-6xl mx-auto">
       <PageHeader title="بيع سريع" actions={
-        <div className="hidden md:flex items-center gap-1 text-xs text-muted-foreground">
-          <Keyboard className="w-3.5 h-3.5" />
-          <span>F2 بحث · F9 حفظ · F4 عميل · F6 حساب · F7 طريقة · +/-</span>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => holdDialog.show()}
+            className="relative h-8 px-2.5 rounded-lg border text-xs font-medium hover:bg-muted flex items-center gap-1">
+            <Play className="w-3.5 h-3.5" />المعلّقة
+            {held.length > 0 && <span className="min-w-5 h-5 px-1 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold">{held.length}</span>}
+          </button>
+          <div className="hidden md:flex items-center gap-1 text-xs text-muted-foreground">
+            <Keyboard className="w-3.5 h-3.5" />
+            <span>F2 بحث · F8 تعليق · F9 حفظ · +/-</span>
+          </div>
         </div>
       } />
 
