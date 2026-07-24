@@ -9,6 +9,13 @@ export type SellerPerms = {
   maxDiscountPercent: number; // 0-100
 };
 
+export type PaymentMethodKey = "cash" | "bank";
+export type PaymentMethodConfig = {
+  enabled: boolean;
+  defaultAccountId: string;
+  requireRef: boolean; // require transaction reference at POS
+};
+
 export type Settings = {
   // Store
   storeName: string;
@@ -29,6 +36,9 @@ export type Settings = {
   // Accounts
   defaultAccountId: string;
   accounts: Account[];
+  // Payment methods
+  paymentMethods: Record<PaymentMethodKey, PaymentMethodConfig>;
+  defaultMethod: PaymentMethodKey;
   // WhatsApp templates
   waInvoiceTemplate: string;
   waReminderTemplate: string;
@@ -59,6 +69,11 @@ const DEFAULTS: Settings = {
     { id: "bankak", name: "بنكك", type: "bank" },
     { id: "fawry", name: "فوري", type: "bank" },
   ],
+  paymentMethods: {
+    cash: { enabled: true, defaultAccountId: "cash-default", requireRef: false },
+    bank: { enabled: true, defaultAccountId: "okash", requireRef: false },
+  },
+  defaultMethod: "cash",
   waInvoiceTemplate: "السلام عليكم {name}،\nفاتورتك رقم {invoice} بمبلغ {total} — المتبقي {due}.\nشكراً لتعاملك مع {store}.",
   waReminderTemplate: "السلام عليكم {name}،\nتذكير: عليك مبلغ متبقٍ قدره {balance}.\nنرجو السداد في أقرب فرصة.\n{store}",
   sellerPerms: {
@@ -77,7 +92,6 @@ function load(): Settings {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULTS;
     const parsed = JSON.parse(raw);
-    // Merge any missing default accounts (by id) so upgrades pick up new banks.
     const existing: Account[] = Array.isArray(parsed.accounts) ? parsed.accounts : [];
     const existingIds = new Set(existing.map((a) => a.id));
     const merged = [...existing, ...DEFAULTS.accounts.filter((a) => !existingIds.has(a.id))];
@@ -86,6 +100,11 @@ function load(): Settings {
       ...parsed,
       accounts: merged,
       sellerPerms: { ...DEFAULTS.sellerPerms, ...(parsed.sellerPerms ?? {}) },
+      paymentMethods: {
+        cash: { ...DEFAULTS.paymentMethods.cash, ...(parsed.paymentMethods?.cash ?? {}) },
+        bank: { ...DEFAULTS.paymentMethods.bank, ...(parsed.paymentMethods?.bank ?? {}) },
+      },
+      defaultMethod: parsed.defaultMethod ?? DEFAULTS.defaultMethod,
     };
   } catch { return DEFAULTS; }
 }
@@ -106,24 +125,20 @@ export function useSettings(): Settings {
   );
 }
 
-// Compute tax display info (does not affect stored totals)
 export function computeTax(net: number, s: Settings) {
   if (!s.taxEnabled || s.taxPercent <= 0) return { amount: 0, grand: net };
   const amount = Math.max(0, net) * (s.taxPercent / 100);
   return { amount, grand: net + amount };
 }
 
-// Format invoice number with prefix
 export function formatInvoiceNo(n: number | string, s: Settings) {
   return `${s.invoicePrefix || ""}${n}`;
 }
 
-// Render a WhatsApp template with variables
 export function renderTemplate(tpl: string, vars: Record<string, string>): string {
   return tpl.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
 }
 
-// Encode/parse account tag inside sale notes to avoid schema migration
 const ACC_RE = /\[حساب:([^\]]+)\]\s?/;
 const REF_RE = /\[مرجع:([^\]]+)\]\s?/;
 export function encodeNotes(accountName: string, notes: string, ref?: string): string {

@@ -7,8 +7,10 @@ import { useSettings, parseNotes, computeTax, formatInvoiceNo, renderTemplate } 
 import { paymentMethodLabel, paymentMethodIcon } from "@/lib/payments";
 import { Btn } from "@/components/ui-kit";
 import { PaymentDialog } from "@/components/PaymentDialog";
+import { EditInvoiceDialog } from "@/components/EditInvoiceDialog";
+import { PrintFormatPicker } from "@/components/PrintFormatPicker";
 import { Logo } from "@/components/Logo";
-import { Printer, ArrowRight, Wallet, MessageCircle } from "lucide-react";
+import { ArrowRight, Wallet, MessageCircle, Pencil } from "lucide-react";
 
 
 export const Route = createFileRoute("/_authenticated/sales/$id")({
@@ -40,6 +42,7 @@ function SaleView() {
   const { id } = Route.useParams();
   const settings = useSettings();
   const [payOpen, setPayOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ["sale", id],
     queryFn: async () => {
@@ -89,7 +92,15 @@ function SaleView() {
         <Link to="/sales" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
           <ArrowRight className="w-4 h-4" />العودة للفواتير
         </Link>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
+          {data.customers && Number(data.customers.balance) < 0 && (
+            <span className="text-xs px-2 py-1 rounded-full bg-success/10 text-success font-medium">
+              للعميل رصيد فائض: {formatSDG(Math.abs(Number(data.customers.balance)))}
+            </span>
+          )}
+          <Btn variant="outline" onClick={() => setEditOpen(true)}>
+            <Pencil className="w-4 h-4 inline ml-1" />تعديل
+          </Btn>
           {due > 0 && data.customers && (
             <Btn variant="outline" onClick={() => setPayOpen(true)}>
               <Wallet className="w-4 h-4 inline ml-1" />تحصيل ({formatSDG(due)})
@@ -100,7 +111,7 @@ function SaleView() {
               <MessageCircle className="w-4 h-4 inline ml-1" />واتساب
             </Btn>
           )}
-          <Btn onClick={() => window.print()}><Printer className="w-4 h-4 inline ml-1" />طباعة / PDF</Btn>
+          <PrintFormatPicker initial={settings.printFormat} />
         </div>
       </div>
 
@@ -214,6 +225,14 @@ function SaleView() {
           saleId={data.id}
           suggested={due} />
       )}
+
+      <EditInvoiceDialog open={editOpen} onClose={() => setEditOpen(false)}
+        kind="sale"
+        invoice={{
+          id: data.id, total: Number(data.total), discount: Number(data.discount),
+          paid: Number(data.paid), payment_method: data.payment_method,
+          account_name: data.account_name, notes: data.notes,
+        }} />
     </div>
   );
 }

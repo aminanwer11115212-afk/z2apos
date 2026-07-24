@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { Field, Input, Btn, PageHeader } from "@/components/ui-kit";
-import { useSettings, saveSettings, type Account, type PrintFormat } from "@/lib/settings";
-import { Plus, Trash2, CreditCard, Banknote, Printer, Percent, MessageCircle, Shield, Image as ImageIcon, Store } from "lucide-react";
+import { useSettings, saveSettings, type Account, type PrintFormat, type PaymentMethodKey } from "@/lib/settings";
+import { Plus, Trash2, CreditCard, Banknote, Printer, Percent, MessageCircle, Shield, Image as ImageIcon, Store, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -154,6 +154,56 @@ function SettingsPage() {
           </Field>
           <Field label="ملاحظة (رقم الحساب...)"><Input value={newAcc.note} onChange={(e) => setNewAcc({ ...newAcc, note: e.target.value })} /></Field>
           <Btn onClick={addAccount}><Plus className="w-4 h-4 inline ml-1" />إضافة</Btn>
+        </div>
+      </Section>
+
+      {/* Payment methods */}
+      <Section title="طرق الدفع" icon={<Wallet className="w-4 h-4" />}>
+        <p className="text-xs text-muted-foreground mb-3">
+          تفعيل/تعطيل الطرق، اختيار الحساب الافتراضي، وإلزام كتابة رقم العملية.
+        </p>
+        <div className="space-y-2">
+          {(["cash", "bank"] as PaymentMethodKey[]).map((k) => {
+            const cfg = s.paymentMethods[k];
+            const label = k === "cash" ? "💵 نقدي" : "🏦 بنكي";
+            const eligible = s.accounts.filter((a) => k === "cash" ? a.type === "cash" : a.type === "bank");
+            return (
+              <div key={k} className="p-3 rounded-lg border bg-card">
+                <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
+                  <div className="font-medium">{label}</div>
+                  <div className="flex items-center gap-3 text-xs">
+                    <label className="flex items-center gap-1">
+                      <input type="checkbox" checked={cfg.enabled}
+                        onChange={(e) => saveSettings({ paymentMethods: { ...s.paymentMethods, [k]: { ...cfg, enabled: e.target.checked } } })} />
+                      مفعّلة
+                    </label>
+                    <label className="flex items-center gap-1">
+                      <input type="radio" name="def-method" checked={s.defaultMethod === k}
+                        onChange={() => saveSettings({ defaultMethod: k })} />
+                      افتراضية
+                    </label>
+                  </div>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  <Field label="الحساب الافتراضي">
+                    <select value={cfg.defaultAccountId}
+                      onChange={(e) => saveSettings({ paymentMethods: { ...s.paymentMethods, [k]: { ...cfg, defaultAccountId: e.target.value } } })}
+                      className="w-full h-10 px-2 rounded-lg border bg-background text-sm">
+                      {eligible.length === 0 && <option value="">— لا يوجد حساب —</option>}
+                      {eligible.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="رقم العملية">
+                    <label className="flex items-center gap-2 h-10 px-3 rounded-lg border bg-background cursor-pointer text-sm">
+                      <input type="checkbox" checked={cfg.requireRef}
+                        onChange={(e) => saveSettings({ paymentMethods: { ...s.paymentMethods, [k]: { ...cfg, requireRef: e.target.checked } } })} />
+                      يتطلب رقم عملية عند الحفظ
+                    </label>
+                  </Field>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </Section>
 

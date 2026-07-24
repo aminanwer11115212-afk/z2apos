@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG, useMyRole } from "@/lib/auth";
 import { useSettings, encodeNotes, computeTax } from "@/lib/settings";
-import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/payments";
+import { type PaymentMethod } from "@/lib/payments";
 import { Field, Btn, PageHeader, Modal, Input, useDialog } from "@/components/ui-kit";
 import { Plus, Minus, Trash2, Search, Keyboard, UserPlus, Lock, Pause, Play, ChevronRight, ChevronLeft, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
@@ -36,13 +36,21 @@ function NewSale() {
 
   const bankAccounts = useMemo(() => settings.accounts.filter((a) => a.type === "bank"), [settings.accounts]);
   const cashAccount = useMemo(() => settings.accounts.find((a) => a.type === "cash") ?? settings.accounts[0], [settings.accounts]);
+  const enabledMethods = useMemo(
+    () => (Object.keys(settings.paymentMethods) as ("cash" | "bank")[]).filter((k) => settings.paymentMethods[k].enabled),
+    [settings.paymentMethods],
+  );
+  const initialMethod: PaymentMethod = enabledMethods.includes(settings.defaultMethod)
+    ? settings.defaultMethod : (enabledMethods[0] ?? "cash");
 
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [lines, setLines] = useState<Line[]>([]);
   const [customerId, setCustomerId] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
-  const [bankAccountId, setBankAccountId] = useState<string>(bankAccounts[0]?.id ?? "");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(initialMethod);
+  const [bankAccountId, setBankAccountId] = useState<string>(
+    settings.paymentMethods.bank.defaultAccountId || bankAccounts[0]?.id || ""
+  );
   const [txRef, setTxRef] = useState("");
   const [discount, setDiscount] = useState(0);
   const [paid, setPaid] = useState(0);
@@ -162,6 +170,8 @@ function NewSale() {
   const save = useMutation({
     mutationFn: async () => {
       if (lines.length === 0) throw new Error("لا توجد أصناف");
+      const methodCfg = settings.paymentMethods[paymentMethod as "cash" | "bank"];
+      if (methodCfg?.requireRef && !txRef.trim()) throw new Error("رقم العملية مطلوب لهذه الطريقة");
       const { data: userRes } = await supabase.auth.getUser();
       const uid = userRes.user?.id;
       if (!uid) throw new Error("يجب تسجيل الدخول");
@@ -353,14 +363,17 @@ function NewSale() {
           </Field>
 
           <Field label="طريقة الدفع (F7)">
-            <div className="grid grid-cols-2 gap-1">
-              {PAYMENT_METHODS.map((m, i) => (
-                <button key={m.value} type="button" ref={i === 0 ? methodRef : undefined}
-                  onClick={() => setPaymentMethod(m.value)}
-                  className={`h-10 rounded-lg border text-sm font-medium ${paymentMethod === m.value ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
-                  {m.icon} {m.label}
-                </button>
-              ))}
+            <div className={`grid gap-1`} style={{ gridTemplateColumns: `repeat(${Math.max(1, enabledMethods.length)}, minmax(0, 1fr))` }}>
+              {enabledMethods.map((m, i) => {
+                const meta = m === "cash" ? { icon: "💵", label: "نقدي" } : { icon: "🏦", label: "بنكي" };
+                return (
+                  <button key={m} type="button" ref={i === 0 ? methodRef : undefined}
+                    onClick={() => setPaymentMethod(m)}
+                    className={`h-10 rounded-lg border text-sm font-medium ${paymentMethod === m ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
+                    {meta.icon} {meta.label}
+                  </button>
+                );
+              })}
             </div>
           </Field>
 
