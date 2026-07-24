@@ -92,7 +92,15 @@ function SaleView() {
         <Link to="/sales" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
           <ArrowRight className="w-4 h-4" />العودة للفواتير
         </Link>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
+          {data.customers && Number(data.customers.balance) < 0 && (
+            <span className="text-xs px-2 py-1 rounded-full bg-success/10 text-success font-medium">
+              للعميل رصيد فائض: {formatSDG(Math.abs(Number(data.customers.balance)))}
+            </span>
+          )}
+          <Btn variant="outline" onClick={() => setEditOpen(true)}>
+            <Pencil className="w-4 h-4 inline ml-1" />تعديل
+          </Btn>
           {due > 0 && data.customers && (
             <Btn variant="outline" onClick={() => setPayOpen(true)}>
               <Wallet className="w-4 h-4 inline ml-1" />تحصيل ({formatSDG(due)})
@@ -103,7 +111,7 @@ function SaleView() {
               <MessageCircle className="w-4 h-4 inline ml-1" />واتساب
             </Btn>
           )}
-          <Btn onClick={() => window.print()}><Printer className="w-4 h-4 inline ml-1" />طباعة / PDF</Btn>
+          <PrintFormatPicker initial={settings.printFormat} />
         </div>
       </div>
 
