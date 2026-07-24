@@ -26,12 +26,16 @@ function NewSale() {
   const [lines, setLines] = useState<Line[]>([]);
   const [customerId, setCustomerId] = useState("");
   const [accountId, setAccountId] = useState(settings.defaultAccountId);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [discount, setDiscount] = useState(0);
   const [paid, setPaid] = useState(0);
   const [notes, setNotes] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const customerRef = useRef<HTMLSelectElement>(null);
   const accountRef = useRef<HTMLSelectElement>(null);
+  const methodRef = useRef<HTMLButtonElement>(null);
+  const custDialog = useDialog();
+  const [newCust, setNewCust] = useState({ name: "", phone: "" });
 
   useEffect(() => { searchRef.current?.focus(); }, []);
   useEffect(() => { setAccountId(settings.defaultAccountId); }, [settings.defaultAccountId]);
