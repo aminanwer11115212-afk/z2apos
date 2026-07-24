@@ -71,17 +71,21 @@ export function EditInvoiceDialog({ open, onClose, kind, invoice }: Props) {
       const ref = method === "bank" ? txRef.trim() : "";
       const finalNotes = acc ? encodeNotes(acc.name, noteText, ref) : (noteText || null);
 
-      const patch: Record<string, unknown> = {
+      const basePatch = {
         paid,
         payment_method: method,
         account_name: acc?.name ?? null,
         notes: finalNotes || null,
       };
-      if (kind === "sale") patch.discount = discount;
-
-      const table = kind === "sale" ? "sales" : "purchases";
-      const { error } = await supabase.from(table).update(patch).eq("id", invoice.id);
-      if (error) throw error;
+      if (kind === "sale") {
+        const { error } = await supabase.from("sales")
+          .update({ ...basePatch, discount }).eq("id", invoice.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("purchases")
+          .update(basePatch).eq("id", invoice.id);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       toast.success("تم تحديث الفاتورة");
