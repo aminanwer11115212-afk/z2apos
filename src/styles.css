@@ -100,45 +100,85 @@
   input, button, select, textarea { font-family: inherit; }
 }
 
+/* ==================================================
+   Print — three formats: A4, thermal 80mm, thermal 58mm.
+   The active format is toggled via `body.print-format-*`.
+   ================================================== */
+
+/* Named page sizes */
+@page a4paper { size: A4; margin: 12mm; }
+@page thermal80 { size: 80mm auto; margin: 3mm; }
+@page thermal58 { size: 58mm auto; margin: 2mm; }
+
 @media print {
-  @page { size: A5; margin: 10mm; }
   html, body { background: #ffffff !important; color: #0f172a !important; }
   .no-print { display: none !important; }
   .print-only { display: block !important; }
-  .print-area { box-shadow: none !important; border: none !important; background: #ffffff !important; color: #0f172a !important; }
+  .print-area {
+    box-shadow: none !important; border: none !important;
+    background: #ffffff !important; color: #0f172a !important;
+  }
   .print-area * { color: #0f172a !important; border-color: #cbd5e1 !important; }
   .print-area .muted-print { color: #475569 !important; }
   .print-area table { border-collapse: collapse; width: 100%; }
-  .print-area th, .print-area td { border: 1px solid #cbd5e1 !important; padding: 6px 8px; }
-  .print-area thead { background: #f1f5f9 !important; }
-}
-/* Thermal formats */
-@media print {
-  .print-thermal-80 { }
-  .print-thermal-58 { }
-}
-body.print-thermal-80 @page,
-body.print-thermal-80 { }
-@page thermal80 { size: 80mm auto; margin: 3mm; }
-@page thermal58 { size: 58mm auto; margin: 2mm; }
-body.print-format-thermal80 { }
-body.print-format-thermal58 { }
-@media print {
-  body.print-format-thermal80 { page: thermal80; }
-  body.print-format-thermal58 { page: thermal58; }
-  body.print-format-thermal80 .print-area,
-  body.print-format-thermal58 .print-area {
-    max-width: 100% !important; padding: 4px !important; font-size: 11px !important;
+
+  /* ---- A4 (default) ---- */
+  body.print-format-a4 { page: a4paper; }
+  body.print-format-a4 .print-area {
+    max-width: 100% !important;
+    padding: 16px !important;
+    font-size: 12px !important;
   }
-  body.print-format-thermal58 .print-area { font-size: 10px !important; }
+  body.print-format-a4 .print-area th,
+  body.print-format-a4 .print-area td {
+    border: 1px solid #cbd5e1 !important; padding: 6px 8px !important;
+  }
+  body.print-format-a4 .print-area thead { background: #f1f5f9 !important; }
+
+  /* ---- Thermal 80mm ---- */
+  body.print-format-thermal80 { page: thermal80; }
+  body.print-format-thermal80 .print-area {
+    max-width: 100% !important;
+    padding: 4px !important;
+    font-size: 11px !important;
+    border-radius: 0 !important;
+  }
   body.print-format-thermal80 .print-area th,
-  body.print-format-thermal80 .print-area td,
+  body.print-format-thermal80 .print-area td {
+    padding: 2px 3px !important;
+    border: none !important;
+    border-bottom: 1px solid #cbd5e1 !important;
+  }
+  body.print-format-thermal80 .print-area thead { background: transparent !important; }
+
+  /* ---- Thermal 58mm ---- */
+  body.print-format-thermal58 { page: thermal58; }
+  body.print-format-thermal58 .print-area {
+    max-width: 100% !important;
+    padding: 2px !important;
+    font-size: 10px !important;
+    border-radius: 0 !important;
+  }
   body.print-format-thermal58 .print-area th,
   body.print-format-thermal58 .print-area td {
-    padding: 2px 3px !important; border: none !important; border-bottom: 1px dashed #94a3b8 !important;
+    padding: 1px 2px !important;
+    border: none !important;
+    border-bottom: 1px solid #cbd5e1 !important;
   }
+  body.print-format-thermal58 .print-area thead { background: transparent !important; }
+
+  /* Hide bulky columns / blocks on thermal receipts */
   body.print-format-thermal80 .hide-on-thermal,
   body.print-format-thermal58 .hide-on-thermal { display: none !important; }
+
+  /* Fallback for unspecified body (older calls to window.print without picker) */
+  body:not(.print-format-a4):not(.print-format-thermal80):not(.print-format-thermal58) {
+    page: a4paper;
+  }
+  body:not(.print-format-a4):not(.print-format-thermal80):not(.print-format-thermal58) .print-area th,
+  body:not(.print-format-a4):not(.print-format-thermal80):not(.print-format-thermal58) .print-area td {
+    border: 1px solid #cbd5e1 !important; padding: 6px 8px !important;
+  }
 }
 .print-only { display: none; }
 
