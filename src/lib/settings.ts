@@ -124,14 +124,18 @@ export function renderTemplate(tpl: string, vars: Record<string, string>): strin
 }
 
 // Encode/parse account tag inside sale notes to avoid schema migration
-const ACC_RE = /^\[حساب:([^\]]+)\]\s?/;
-export function encodeNotes(accountName: string, notes: string): string {
-  const clean = (notes || "").replace(ACC_RE, "").trim();
-  return `[حساب:${accountName}]${clean ? " " + clean : ""}`;
+const ACC_RE = /\[حساب:([^\]]+)\]\s?/;
+const REF_RE = /\[مرجع:([^\]]+)\]\s?/;
+export function encodeNotes(accountName: string, notes: string, ref?: string): string {
+  const clean = (notes || "").replace(ACC_RE, "").replace(REF_RE, "").trim();
+  const refPart = ref && ref.trim() ? `[مرجع:${ref.trim()}]` : "";
+  const accPart = `[حساب:${accountName}]`;
+  return [accPart, refPart, clean].filter(Boolean).join(" ");
 }
-export function parseNotes(notes: string | null | undefined): { account: string | null; text: string } {
-  if (!notes) return { account: null, text: "" };
-  const m = notes.match(ACC_RE);
-  if (!m) return { account: null, text: notes };
-  return { account: m[1].trim(), text: notes.replace(ACC_RE, "").trim() };
+export function parseNotes(notes: string | null | undefined): { account: string | null; ref: string | null; text: string } {
+  if (!notes) return { account: null, ref: null, text: "" };
+  const acc = notes.match(ACC_RE)?.[1]?.trim() ?? null;
+  const ref = notes.match(REF_RE)?.[1]?.trim() ?? null;
+  const text = notes.replace(ACC_RE, "").replace(REF_RE, "").trim();
+  return { account: acc, ref, text };
 }
