@@ -2,11 +2,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { formatSDG } from "@/lib/auth";
-import { useSettings, encodeNotes } from "@/lib/settings";
+import { formatSDG, useMyRole } from "@/lib/auth";
+import { useSettings, encodeNotes, computeTax } from "@/lib/settings";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/payments";
 import { Field, Btn, PageHeader, Modal, Input, useDialog } from "@/components/ui-kit";
-import { Plus, Minus, Trash2, Search, Keyboard, UserPlus } from "lucide-react";
+import { Plus, Minus, Trash2, Search, Keyboard, UserPlus, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/sales/new")({
@@ -21,6 +21,11 @@ function NewSale() {
   const qc = useQueryClient();
   const nav = useNavigate();
   const settings = useSettings();
+  const { data: myRole } = useMyRole();
+  const isSeller = myRole === "seller";
+  const perms = settings.sellerPerms;
+  const canEditPrice = !isSeller || perms.editPrice;
+  const maxDiscPct = isSeller ? perms.maxDiscountPercent : 100;
   const [q, setQ] = useState("");
   const [hi, setHi] = useState(0);
   const [lines, setLines] = useState<Line[]>([]);
@@ -100,7 +105,11 @@ function NewSale() {
   const remove = (id: string) => setLines((p) => p.filter((l) => l.part.id !== id));
 
   const total = lines.reduce((s, l) => s + l.qty * l.unit_price, 0);
-  const due = Math.max(0, total - discount - paid);
+  const maxDiscount = total * (maxDiscPct / 100);
+  const effectiveDiscount = Math.min(discount, maxDiscount);
+  const net = Math.max(0, total - effectiveDiscount);
+  const tax = computeTax(net, settings);
+  const due = Math.max(0, tax.grand - paid);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -112,7 +121,7 @@ function NewSale() {
       const finalNotes = acc ? encodeNotes(acc.name, notes) : notes;
       const { data: sale, error: e1 } = await supabase.from("sales").insert({
         customer_id: customerId || null,
-        discount, paid, notes: finalNotes || null, created_by: uid,
+        discount: effectiveDiscount, paid, notes: finalNotes || null, created_by: uid,
         payment_method: paymentMethod,
         account_name: paymentMethod === "credit" ? null : (acc?.name ?? null),
       }).select("id, invoice_no").single();
@@ -223,9 +232,12 @@ function NewSale() {
                         </div>
                       </td>
                       <td className="p-2">
-                        <input type="number" step="0.01" value={l.unit_price}
-                          onChange={(e) => setPrice(l.part.id, Number(e.target.value))}
-                          className="w-full h-7 px-2 rounded border bg-background text-sm text-center" />
+                        <div className="relative">
+                          <input type="number" step="0.01" value={l.unit_price} readOnly={!canEditPrice}
+                            onChange={(e) => canEditPrice && setPrice(l.part.id, Number(e.target.value))}
+                            className={`w-full h-7 px-2 rounded border bg-background text-sm text-center ${!canEditPrice ? "opacity-70 cursor-not-allowed" : ""}`} />
+                          {!canEditPrice && <Lock className="w-3 h-3 absolute left-1 top-2 text-muted-foreground" />}
+                        </div>
                       </td>
                       <td className="p-2 text-left font-semibold">{formatSDG(l.qty * l.unit_price)}</td>
                       <td className="p-2">
@@ -281,8 +293,9 @@ function NewSale() {
           )}
 
           <div className="grid grid-cols-2 gap-2">
-            <Field label="خصم">
-              <input type="number" step="0.01" value={discount} onChange={(e) => setDiscount(Number(e.target.value) || 0)}
+            <Field label={`خصم${isSeller && maxDiscPct < 100 ? ` (حد ${maxDiscPct}%)` : ""}`}>
+              <input type="number" step="0.01" value={discount}
+                onChange={(e) => setDiscount(Math.min(Number(e.target.value) || 0, maxDiscount))}
                 className="w-full h-10 px-2 rounded-lg border bg-background text-sm" />
             </Field>
             <Field label="مدفوع">
@@ -297,7 +310,10 @@ function NewSale() {
 
           <div className="border-t pt-2 space-y-1 text-xs">
             <Row label="الإجمالي" value={formatSDG(total)} />
-            <Row label="الخصم" value={`- ${formatSDG(discount)}`} />
+            <Row label="الخصم" value={`- ${formatSDG(effectiveDiscount)}`} />
+            {settings.taxEnabled && settings.taxPercent > 0 && (
+              <Row label={`الضريبة (${settings.taxPercent}%)`} value={`+ ${formatSDG(tax.amount)}`} />
+            )}
             <Row label="المدفوع" value={`- ${formatSDG(paid)}`} />
             <div className="flex justify-between font-bold text-sm pt-1 border-t">
               <span>المتبقي</span><span className={due > 0 ? "text-destructive" : "text-success"}>{formatSDG(due)}</span>

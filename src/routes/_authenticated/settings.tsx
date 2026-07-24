@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Field, Input, Btn, PageHeader } from "@/components/ui-kit";
 import { useSettings, saveSettings, type Account, type PrintFormat } from "@/lib/settings";
-import { Plus, Trash2, CreditCard, Banknote, Printer } from "lucide-react";
+import { Plus, Trash2, CreditCard, Banknote, Printer, Percent, MessageCircle, Shield, Image as ImageIcon, Store } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -12,6 +12,7 @@ export const Route = createFileRoute("/_authenticated/settings")({
 
 function SettingsPage() {
   const s = useSettings();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [newAcc, setNewAcc] = useState<{ name: string; type: "cash" | "bank"; note: string }>({ name: "", type: "bank", note: "" });
 
   const addAccount = () => {
@@ -27,17 +28,73 @@ function SettingsPage() {
     saveSettings({ accounts: next, defaultAccountId: s.defaultAccountId === id ? next[0].id : s.defaultAccountId });
   };
 
+  const uploadLogo = (file: File) => {
+    if (file.size > 500_000) return toast.error("حجم الصورة كبير — الحد ~500KB");
+    const reader = new FileReader();
+    reader.onload = () => {
+      saveSettings({ customLogoUrl: String(reader.result) });
+      toast.success("تم تحديث الشعار");
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="p-4 lg:p-6 max-w-4xl mx-auto space-y-6">
-      <PageHeader title="الإعدادات" subtitle="إعدادات النظام والطباعة والحسابات" />
+      <PageHeader title="الإعدادات" subtitle="النظام والطباعة والحسابات والصلاحيات" />
 
       {/* Store */}
-      <Section title="بيانات المتجر">
+      <Section title="بيانات المتجر" icon={<Store className="w-4 h-4" />}>
         <div className="grid sm:grid-cols-2 gap-3">
           <Field label="اسم المتجر"><Input value={s.storeName} onChange={(e) => saveSettings({ storeName: e.target.value })} /></Field>
           <Field label="الهاتف"><Input value={s.storePhone} onChange={(e) => saveSettings({ storePhone: e.target.value })} /></Field>
           <Field label="العنوان"><Input value={s.storeAddress} onChange={(e) => saveSettings({ storeAddress: e.target.value })} /></Field>
+          <Field label="الرقم الضريبي / السجل"><Input value={s.storeTaxNo} onChange={(e) => saveSettings({ storeTaxNo: e.target.value })} /></Field>
           <Field label="نص أسفل الفاتورة"><Input value={s.invoiceFooter} onChange={(e) => saveSettings({ invoiceFooter: e.target.value })} /></Field>
+        </div>
+      </Section>
+
+      {/* Custom Logo */}
+      <Section title="الشعار المخصّص" icon={<ImageIcon className="w-4 h-4" />}>
+        <div className="flex items-center gap-4">
+          <div className="w-24 h-24 rounded-xl border bg-muted flex items-center justify-center overflow-hidden">
+            {s.customLogoUrl
+              ? <img src={s.customLogoUrl} alt="logo" className="max-w-full max-h-full" />
+              : <span className="text-xs text-muted-foreground">الافتراضي</span>}
+          </div>
+          <div className="flex-1 space-y-2">
+            <input ref={fileRef} type="file" accept="image/*" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadLogo(f); }} />
+            <div className="flex gap-2 flex-wrap">
+              <Btn variant="outline" onClick={() => fileRef.current?.click()}>رفع شعار</Btn>
+              {s.customLogoUrl && (
+                <Btn variant="outline" onClick={() => saveSettings({ customLogoUrl: null })}>إزالة</Btn>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">PNG/JPG صغيرة — يفضّل بخلفية شفافة. يظهر في الفواتير والتقارير.</p>
+          </div>
+        </div>
+      </Section>
+
+      {/* Tax + Invoice */}
+      <Section title="الضريبة وترقيم الفواتير" icon={<Percent className="w-4 h-4" />}>
+        <div className="grid sm:grid-cols-3 gap-3">
+          <Field label="تفعيل الضريبة">
+            <label className="flex items-center gap-2 h-11 px-3 rounded-lg border bg-background cursor-pointer">
+              <input type="checkbox" checked={s.taxEnabled} onChange={(e) => saveSettings({ taxEnabled: e.target.checked })} />
+              <span className="text-sm">إظهار الضريبة في الفاتورة</span>
+            </label>
+          </Field>
+          <Field label="نسبة الضريبة %">
+            <Input type="number" min={0} max={100} step="0.01" value={s.taxPercent}
+              onChange={(e) => saveSettings({ taxPercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })} />
+          </Field>
+          <Field label="بادئة رقم الفاتورة">
+            <Input value={s.invoicePrefix} onChange={(e) => saveSettings({ invoicePrefix: e.target.value })} placeholder="مثال: INV-" />
+          </Field>
+          <Field label="حد المخزون المنخفض (افتراضي)">
+            <Input type="number" min={0} value={s.lowStockDefault}
+              onChange={(e) => saveSettings({ lowStockDefault: Math.max(0, Number(e.target.value) || 0) })} />
+          </Field>
         </div>
       </Section>
 
@@ -100,6 +157,53 @@ function SettingsPage() {
         </div>
       </Section>
 
+      {/* Seller Permissions */}
+      <Section title="صلاحيات البائع" icon={<Shield className="w-4 h-4" />}>
+        <div className="grid sm:grid-cols-3 gap-3">
+          <Field label="رؤية سعر التكلفة">
+            <label className="flex items-center gap-2 h-11 px-3 rounded-lg border bg-background cursor-pointer">
+              <input type="checkbox" checked={s.sellerPerms.seeCost}
+                onChange={(e) => saveSettings({ sellerPerms: { ...s.sellerPerms, seeCost: e.target.checked } })} />
+              <span className="text-sm">يستطيع رؤية التكلفة</span>
+            </label>
+          </Field>
+          <Field label="تعديل السعر في البيع">
+            <label className="flex items-center gap-2 h-11 px-3 rounded-lg border bg-background cursor-pointer">
+              <input type="checkbox" checked={s.sellerPerms.editPrice}
+                onChange={(e) => saveSettings({ sellerPerms: { ...s.sellerPerms, editPrice: e.target.checked } })} />
+              <span className="text-sm">يستطيع تعديل السعر</span>
+            </label>
+          </Field>
+          <Field label="أقصى نسبة خصم %">
+            <Input type="number" min={0} max={100} value={s.sellerPerms.maxDiscountPercent}
+              onChange={(e) => saveSettings({ sellerPerms: { ...s.sellerPerms, maxDiscountPercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)) } })} />
+          </Field>
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">تسري هذه الصلاحيات على مستخدمي «بائع» فقط — المدير يتخطاها.</p>
+      </Section>
+
+      {/* WhatsApp Templates */}
+      <Section title="قوالب واتساب" icon={<MessageCircle className="w-4 h-4" />}>
+        <div className="space-y-3">
+          <Field label="قالب إرسال الفاتورة">
+            <textarea value={s.waInvoiceTemplate} onChange={(e) => saveSettings({ waInvoiceTemplate: e.target.value })}
+              rows={4} className="w-full p-3 rounded-lg border bg-background text-sm" />
+          </Field>
+          <Field label="قالب تذكير سداد">
+            <textarea value={s.waReminderTemplate} onChange={(e) => saveSettings({ waReminderTemplate: e.target.value })}
+              rows={4} className="w-full p-3 rounded-lg border bg-background text-sm" />
+          </Field>
+          <p className="text-xs text-muted-foreground">
+            المتغيرات المتاحة: <code className="mx-1">{`{name}`}</code>
+            <code className="mx-1">{`{invoice}`}</code>
+            <code className="mx-1">{`{total}`}</code>
+            <code className="mx-1">{`{due}`}</code>
+            <code className="mx-1">{`{balance}`}</code>
+            <code className="mx-1">{`{store}`}</code>
+          </p>
+        </div>
+      </Section>
+
       {/* Keyboard help */}
       <Section title="اختصارات لوحة المفاتيح — البيع السريع">
         <div className="grid sm:grid-cols-2 gap-2 text-sm">
@@ -109,6 +213,7 @@ function SettingsPage() {
           <Kbd k="+ / -" label="زيادة/إنقاص الكمية للسطر الأخير" />
           <Kbd k="F4" label="اختيار العميل" />
           <Kbd k="F6" label="اختيار الحساب" />
+          <Kbd k="F7" label="طريقة الدفع" />
           <Kbd k="F9" label="حفظ الفاتورة" />
           <Kbd k="Esc" label="مسح البحث / إلغاء" />
         </div>
