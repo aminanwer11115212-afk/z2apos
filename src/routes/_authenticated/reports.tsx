@@ -6,7 +6,8 @@ import { formatSDG } from "@/lib/auth";
 import { PageHeader, Field, Input, Btn } from "@/components/ui-kit";
 import { Logo } from "@/components/Logo";
 import { paymentMethodLabel } from "@/lib/payments";
-import { Printer, Download } from "lucide-react";
+import { Printer, Download, FileSpreadsheet } from "lucide-react";
+import * as XLSX from "xlsx";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({ meta: [{ title: "التقارير — 2A" }] }),
