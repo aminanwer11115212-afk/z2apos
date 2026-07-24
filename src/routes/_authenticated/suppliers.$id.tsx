@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
-import { useSettings } from "@/lib/settings";
+import { useSettings, renderTemplate } from "@/lib/settings";
 import { paymentMethodLabel } from "@/lib/payments";
 import { Btn, PageHeader } from "@/components/ui-kit";
 import { PaymentDialog } from "@/components/PaymentDialog";
@@ -73,11 +73,17 @@ function SupplierStatement() {
                 <Wallet className="w-4 h-4 inline ml-1" />سداد ({formatSDG(sup.balance)})
               </Btn>
             )}
-            {sup.phone && (
-              <a href={`https://wa.me/${sup.phone.replace(/[^\d]/g, "")}`} target="_blank" rel="noreferrer">
-                <Btn variant="outline"><MessageCircle className="w-4 h-4 inline ml-1" />واتساب</Btn>
-              </a>
-            )}
+            {sup.phone && (() => {
+              const msg = renderTemplate(settings.waReminderTemplate, {
+                name: sup.name, balance: formatSDG(sup.balance), store: settings.storeName,
+              });
+              const href = `https://wa.me/${sup.phone.replace(/[^\d]/g, "")}?text=${encodeURIComponent(msg)}`;
+              return (
+                <a href={href} target="_blank" rel="noreferrer">
+                  <Btn variant="outline"><MessageCircle className="w-4 h-4 inline ml-1" />واتساب</Btn>
+                </a>
+              );
+            })()}
             <Btn onClick={() => window.print()}><Printer className="w-4 h-4 inline ml-1" />طباعة</Btn>
           </div>} />
         <Link to="/suppliers" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-3">
