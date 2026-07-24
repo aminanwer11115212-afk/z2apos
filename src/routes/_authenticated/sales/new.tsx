@@ -50,12 +50,32 @@ function NewSale() {
   });
 
   const { data: customers = [] } = useQuery({
-    queryKey: ["customers-lite"],
+    queryKey: ["customers-lite-phone"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("customers").select("id,name").order("name");
+      const { data, error } = await supabase.from("customers").select("id,name,phone").order("name");
       if (error) throw error;
-      return data as { id: string; name: string }[];
+      return data as { id: string; name: string; phone: string | null }[];
     },
+  });
+
+  const addCustomer = useMutation({
+    mutationFn: async () => {
+      if (!newCust.name.trim()) throw new Error("الاسم مطلوب");
+      const { data, error } = await supabase.from("customers")
+        .insert({ name: newCust.name.trim(), phone: newCust.phone.trim() || null })
+        .select("id").single();
+      if (error) throw error;
+      return data.id as string;
+    },
+    onSuccess: (id) => {
+      toast.success("تمت إضافة العميل");
+      setCustomerId(id);
+      setNewCust({ name: "", phone: "" });
+      custDialog.hide();
+      qc.invalidateQueries({ queryKey: ["customers-lite-phone"] });
+      qc.invalidateQueries({ queryKey: ["customers"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const results = useMemo(() =>
