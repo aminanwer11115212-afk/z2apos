@@ -39,11 +39,12 @@ type SaleFull = {
 function SaleView() {
   const { id } = Route.useParams();
   const settings = useSettings();
+  const [payOpen, setPayOpen] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ["sale", id],
     queryFn: async () => {
       const { data, error } = await supabase.from("sales")
-        .select("id,invoice_no,total,discount,paid,created_at,notes, customers(name,phone), sale_items(id,qty,unit_price,subtotal, parts(name,sku))")
+        .select("id,invoice_no,total,discount,paid,created_at,notes,payment_method,account_name,customer_id, customers(id,name,phone,balance), sale_items(id,qty,unit_price,subtotal, parts(name,sku))")
         .eq("id", id).single();
       if (error) throw error;
       return data as unknown as SaleFull;
