@@ -225,6 +225,14 @@ function SaleView() {
           saleId={data.id}
           suggested={due} />
       )}
+
+      <EditInvoiceDialog open={editOpen} onClose={() => setEditOpen(false)}
+        kind="sale"
+        invoice={{
+          id: data.id, total: Number(data.total), discount: Number(data.discount),
+          paid: Number(data.paid), payment_method: data.payment_method,
+          account_name: data.account_name, notes: data.notes,
+        }} />
     </div>
   );
 }
