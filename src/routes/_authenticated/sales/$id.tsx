@@ -184,7 +184,7 @@ function SaleView() {
               <tr key={it.id} className="border-t">
                 <td className="p-2">
                   {it.parts?.name}
-                  {it.parts?.sku && <span className="text-xs muted-print text-muted-foreground mr-1">({it.parts.sku})</span>}
+                  {it.parts?.code && <span className="text-xs muted-print text-muted-foreground mr-1">({it.parts.code})</span>}
                 </td>
                 <td className="p-2 text-center">{it.qty}</td>
                 <td className="p-2 text-left">{formatSDG(Number(it.unit_price))}</td>
