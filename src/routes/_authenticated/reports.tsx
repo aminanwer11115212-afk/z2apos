@@ -246,6 +246,57 @@ function Reports() {
           <Stat label="المتبقي" value={formatSDG((data?.salesNet ?? 0) - (data?.salesCollected ?? 0))} highlight />
         </Section>
 
+        <Section title="الربحية">
+          <Stat label="الإيراد (صافي)" value={formatSDG(data?.salesNet ?? 0)} />
+          <Stat label="تكلفة المبيعات" value={formatSDG(data?.cogs ?? 0)} />
+          <Stat label="إجمالي الربح" value={formatSDG(data?.profit ?? 0)} highlight />
+          <Stat label="هامش الربح" value={`${data && data.salesNet ? Math.round((data.profit / data.salesNet) * 100) : 0}%`} />
+        </Section>
+
+        <div className="bg-card border rounded-2xl p-4">
+          <h2 className="font-bold mb-3">الأصناف الأكثر مبيعاً</h2>
+          {!data?.topProducts?.length ? (
+            <p className="text-sm text-muted-foreground">لا توجد بيانات</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="text-xs muted-print text-muted-foreground border-b">
+                <tr><th className="text-right py-2">الاسم</th><th className="text-center py-2">الكمية</th><th className="text-left py-2">الإيراد</th></tr>
+              </thead>
+              <tbody className="divide-y">
+                {data.topProducts.map((p) => (
+                  <tr key={p.name}>
+                    <td className="py-2">{p.name}</td>
+                    <td className="py-2 text-center">{p.qty}</td>
+                    <td className="py-2 text-left font-semibold">{formatSDG(p.revenue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="bg-card border rounded-2xl p-4">
+          <h2 className="font-bold mb-3">الدفعات حسب الطريقة</h2>
+          {!data || Object.keys(data.methodMap).length === 0 ? (
+            <p className="text-sm text-muted-foreground">لا توجد دفعات</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="text-xs muted-print text-muted-foreground border-b">
+                <tr><th className="text-right py-2">الطريقة</th><th className="text-center py-2">تحصيل</th><th className="text-left py-2">سداد</th></tr>
+              </thead>
+              <tbody className="divide-y">
+                {Object.entries(data.methodMap).map(([m, v]) => (
+                  <tr key={m}>
+                    <td className="py-2">{paymentMethodLabel(m)}</td>
+                    <td className="py-2 text-center text-success font-semibold">{formatSDG(v.in)}</td>
+                    <td className="py-2 text-left text-destructive font-semibold">{formatSDG(v.out)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
         <Section title="المشتريات">
           <Stat label="عدد الفواتير" value={String(data?.purchasesCount ?? 0)} />
           <Stat label="الإجمالي" value={formatSDG(data?.purchasesTotal ?? 0)} />
