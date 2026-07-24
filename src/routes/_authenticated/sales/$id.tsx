@@ -35,7 +35,7 @@ type SaleFull = {
   customer_id: string | null;
   customers: { id: string; name: string; phone: string | null; balance: number } | null;
   sale_items: { id: string; qty: number; unit_price: number; subtotal: number;
-    parts: { name: string; sku: string | null } | null }[];
+    parts: { name: string; code: string | null } | null }[];
 };
 
 function SaleView() {
@@ -47,7 +47,7 @@ function SaleView() {
     queryKey: ["sale", id],
     queryFn: async () => {
       const { data, error } = await supabase.from("sales")
-        .select("id,invoice_no,total,discount,paid,created_at,notes,payment_method,account_name,customer_id, customers(id,name,phone,balance), sale_items(id,qty,unit_price,subtotal, parts(name,sku))")
+        .select("id,invoice_no,total,discount,paid,created_at,notes,payment_method,account_name,customer_id, customers(id,name,phone,balance), sale_items(id,qty,unit_price,subtotal, parts(name,code))")
         .eq("id", id).single();
       if (error) throw error;
       return data as unknown as SaleFull;
@@ -184,7 +184,7 @@ function SaleView() {
               <tr key={it.id} className="border-t">
                 <td className="p-2">
                   {it.parts?.name}
-                  {it.parts?.sku && <span className="text-xs muted-print text-muted-foreground mr-1">({it.parts.sku})</span>}
+                  {it.parts?.code && <span className="text-xs muted-print text-muted-foreground mr-1">({it.parts.code})</span>}
                 </td>
                 <td className="p-2 text-center">{it.qty}</td>
                 <td className="p-2 text-left">{formatSDG(Number(it.unit_price))}</td>
