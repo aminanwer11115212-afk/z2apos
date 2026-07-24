@@ -113,6 +113,8 @@ function NewSale() {
       const { data: sale, error: e1 } = await supabase.from("sales").insert({
         customer_id: customerId || null,
         discount, paid, notes: finalNotes || null, created_by: uid,
+        payment_method: paymentMethod,
+        account_name: paymentMethod === "credit" ? null : (acc?.name ?? null),
       }).select("id, invoice_no").single();
       if (e1) throw e1;
       const items = lines.map((l) => ({ sale_id: sale.id, part_id: l.part.id, qty: l.qty, unit_price: l.unit_price }));
