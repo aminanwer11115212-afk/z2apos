@@ -67,12 +67,16 @@ function CustomerStatement() {
     <div className="p-4 lg:p-6 max-w-4xl mx-auto">
       <div className="no-print">
         <PageHeader title={cust.name} subtitle={cust.phone ?? undefined}
-          actions={<div className="flex gap-2 flex-wrap">
-            {Number(cust.balance) > 0 && (
-              <Btn variant="outline" onClick={() => setPayOpen(true)}>
-                <Wallet className="w-4 h-4 inline ml-1" />تحصيل ({formatSDG(cust.balance)})
-              </Btn>
+          actions={<div className="flex gap-2 flex-wrap items-center">
+            {Number(cust.balance) < 0 && (
+              <span className="text-xs px-2 py-1 rounded-full bg-success/10 text-success font-medium">
+                رصيد فائض: {formatSDG(Math.abs(Number(cust.balance)))}
+              </span>
             )}
+            <Btn variant="outline" onClick={() => setPayOpen(true)}>
+              <Wallet className="w-4 h-4 inline ml-1" />
+              {Number(cust.balance) > 0 ? `تحصيل (${formatSDG(cust.balance)})` : "إيداع مقدم"}
+            </Btn>
             {cust.phone && (() => {
               const msg = renderTemplate(settings.waReminderTemplate, {
                 name: cust.name, balance: formatSDG(cust.balance), store: settings.storeName,

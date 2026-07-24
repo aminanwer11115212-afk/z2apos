@@ -67,12 +67,16 @@ function SupplierStatement() {
     <div className="p-4 lg:p-6 max-w-4xl mx-auto">
       <div className="no-print">
         <PageHeader title={sup.name} subtitle={sup.phone ?? undefined}
-          actions={<div className="flex gap-2 flex-wrap">
-            {Number(sup.balance) > 0 && (
-              <Btn variant="outline" onClick={() => setPayOpen(true)}>
-                <Wallet className="w-4 h-4 inline ml-1" />سداد ({formatSDG(sup.balance)})
-              </Btn>
+          actions={<div className="flex gap-2 flex-wrap items-center">
+            {Number(sup.balance) < 0 && (
+              <span className="text-xs px-2 py-1 rounded-full bg-success/10 text-success font-medium">
+                رصيد مقدم: {formatSDG(Math.abs(Number(sup.balance)))}
+              </span>
             )}
+            <Btn variant="outline" onClick={() => setPayOpen(true)}>
+              <Wallet className="w-4 h-4 inline ml-1" />
+              {Number(sup.balance) > 0 ? `سداد (${formatSDG(sup.balance)})` : "دفعة مقدمة"}
+            </Btn>
             {sup.phone && (() => {
               const msg = renderTemplate(settings.waReminderTemplate, {
                 name: sup.name, balance: formatSDG(sup.balance), store: settings.storeName,
