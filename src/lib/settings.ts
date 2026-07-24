@@ -77,9 +77,14 @@ function load(): Settings {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULTS;
     const parsed = JSON.parse(raw);
+    // Merge any missing default accounts (by id) so upgrades pick up new banks.
+    const existing: Account[] = Array.isArray(parsed.accounts) ? parsed.accounts : [];
+    const existingIds = new Set(existing.map((a) => a.id));
+    const merged = [...existing, ...DEFAULTS.accounts.filter((a) => !existingIds.has(a.id))];
     return {
       ...DEFAULTS,
       ...parsed,
+      accounts: merged,
       sellerPerms: { ...DEFAULTS.sellerPerms, ...(parsed.sellerPerms ?? {}) },
     };
   } catch { return DEFAULTS; }
