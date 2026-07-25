@@ -5,12 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
 import { useSettings, parseNotes, computeTax, formatInvoiceNo, renderTemplate } from "@/lib/settings";
 import { paymentMethodLabel, paymentMethodIcon } from "@/lib/payments";
+import { whatsappUrl } from "@/lib/utils";
 import { Btn } from "@/components/ui-kit";
 import { PaymentDialog } from "@/components/PaymentDialog";
 import { EditInvoiceDialog } from "@/components/EditInvoiceDialog";
 import { PrintFormatPicker } from "@/components/PrintFormatPicker";
 import { Logo } from "@/components/Logo";
-import { ArrowRight, Wallet, MessageCircle, Pencil } from "lucide-react";
+import { ArrowRight, Wallet, MessageCircle, Pencil, ExternalLink } from "lucide-react";
 
 
 export const Route = createFileRoute("/_authenticated/sales/$id")({
@@ -54,7 +55,6 @@ function SaleView() {
     },
   });
 
-  // Apply print format class to <body> so @page rules take effect
   useEffect(() => {
     const cls = `print-format-${settings.printFormat}`;
     document.body.classList.add(cls);
@@ -73,7 +73,7 @@ function SaleView() {
   const invoiceLabel = formatInvoiceNo(data.invoice_no, settings);
 
   const shareWhatsApp = () => {
-    const phone = data.customers?.phone?.replace(/[^\d]/g, "");
+    const phone = data.customers?.phone;
     if (!phone) return;
     const msg = renderTemplate(settings.waInvoiceTemplate, {
       name: data.customers?.name ?? "",
@@ -83,7 +83,7 @@ function SaleView() {
       store: settings.storeName,
       balance: formatSDG(Number(data.customers?.balance ?? 0)),
     });
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank");
+    window.open(whatsappUrl(phone, msg), "_blank");
   };
 
   return (
@@ -102,9 +102,16 @@ function SaleView() {
             <Pencil className="w-4 h-4 inline ml-1" />تعديل
           </Btn>
           {due > 0 && data.customers && (
-            <Btn variant="outline" onClick={() => setPayOpen(true)}>
-              <Wallet className="w-4 h-4 inline ml-1" />تحصيل ({formatSDG(due)})
-            </Btn>
+            <>
+              <Link to="/sales/$id/pay" params={{ id }}>
+                <Btn variant="outline">
+                  <ExternalLink className="w-4 h-4 inline ml-1" />صفحة دفع
+                </Btn>
+              </Link>
+              <Btn variant="outline" onClick={() => setPayOpen(true)}>
+                <Wallet className="w-4 h-4 inline ml-1" />تحصيل ({formatSDG(due)})
+              </Btn>
+            </>
           )}
           {data.customers?.phone && (
             <Btn variant="outline" onClick={shareWhatsApp}>
@@ -116,14 +123,12 @@ function SaleView() {
       </div>
 
       <div className={`print-area bg-card border rounded-2xl p-6 shadow-sm ${isThermal ? "text-xs" : ""}`}>
-        {/* Centered header: logo + company name */}
         <div className="flex flex-col items-center text-center gap-2 pb-3 border-b">
           {settings.showLogo && <Logo variant="light" className={isThermal ? "h-12 w-auto" : "h-16 w-auto"} />}
           <div className={`font-bold ${isThermal ? "text-base" : "text-2xl"}`}>{settings.storeName || "نظام 2A"}</div>
           <div className="text-xs muted-print text-muted-foreground font-semibold tracking-wide">فاتورة مبيعات</div>
         </div>
 
-        {/* Invoice meta: number + date + customer */}
         <div className="grid grid-cols-2 gap-3 py-3 text-sm">
           <div>
             <div className="muted-print text-muted-foreground text-xs">رقم الفاتورة</div>
@@ -154,7 +159,6 @@ function SaleView() {
           </div>
         </div>
 
-        {/* Items — Excel-style table */}
         <table className="w-full text-sm invoice-table" style={{ borderCollapse: "collapse" }}>
           <thead className="bg-muted">
             <tr>
@@ -180,7 +184,6 @@ function SaleView() {
           </tbody>
         </table>
 
-        {/* Totals */}
         <div className="flex justify-end mt-4">
           <div className="w-full sm:w-72 text-sm space-y-1">
             <Row label="الإجمالي" value={formatSDG(Number(data.total))} />
@@ -203,7 +206,6 @@ function SaleView() {
           </div>
         )}
 
-        {/* Store details footer — small */}
         <div className="mt-6 pt-3 border-t text-center text-[10px] leading-relaxed muted-print text-muted-foreground">
           <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center">
             {settings.storePhone && <span>📞 {settings.storePhone}</span>}
