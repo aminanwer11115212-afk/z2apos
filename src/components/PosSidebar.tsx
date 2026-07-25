@@ -1,17 +1,17 @@
 import { Field, Btn } from "@/components/ui-kit";
 import { formatSDG } from "@/lib/auth";
 import { computeTax } from "@/lib/settings";
-import { PaymentMethod } from "@/lib/payments";
+import { PaymentMethod, PAYMENT_METHODS } from "@/lib/payments";
 import { Account } from "@/lib/settings";
-import { UserPlus, CheckCircle2, Pause, Trash2 } from "lucide-react";
+import { UserPlus, CheckCircle2, Pause } from "lucide-react";
 import { useMemo } from "react";
 
 type Settings = {
   storeName: string;
   taxEnabled: boolean;
   taxPercent: number;
-  paymentMethods: Record<"cash" | "bank", { enabled: boolean; defaultAccountId: string; requireRef: boolean }>;
-  defaultMethod: "cash" | "bank";
+  paymentMethods: Record<PaymentMethod, { enabled: boolean; defaultAccountId: string; requireRef: boolean }>;
+  defaultMethod: PaymentMethod;
   sellerPerms: { maxDiscountPercent: number };
 };
 
@@ -47,6 +47,14 @@ type PosSidebarProps = {
   methodRef: React.RefObject<HTMLButtonElement | null>;
 };
 
+const methodMeta: Record<PaymentMethod, { icon: string; label: string }> = {
+  cash: { icon: "💵", label: "نقدي" },
+  bank: { icon: "🏦", label: "بنكي" },
+  wallet: { icon: "📱", label: "محفظة" },
+  transfer: { icon: "🔁", label: "تحويل" },
+  credit: { icon: "📝", label: "آجل" },
+};
+
 export function PosSidebar(props: PosSidebarProps) {
   const {
     customers, customerId, onCustomerId, onAddCustomer,
@@ -56,10 +64,11 @@ export function PosSidebar(props: PosSidebarProps) {
     accountRef, customerRef, methodRef,
   } = props;
 
-  const bankAccounts = useMemo(() => accounts.filter((a) => a.type === "bank"), [accounts]);
+  const isDigital = paymentMethod === "bank" || paymentMethod === "wallet";
+  const digitalAccounts = useMemo(() => accounts.filter((a) => a.type === "bank" || a.type === "wallet"), [accounts]);
   const cashAccount = useMemo(() => accounts.find((a) => a.type === "cash") ?? accounts[0], [accounts]);
   const enabledMethods = useMemo(
-    () => (Object.keys(settings.paymentMethods) as ("cash" | "bank")[]).filter((k) => settings.paymentMethods[k].enabled),
+    () => (Object.keys(settings.paymentMethods) as PaymentMethod[]).filter((k) => settings.paymentMethods[k]?.enabled),
     [settings.paymentMethods],
   );
   const maxDiscPct = isSeller ? settings.sellerPerms.maxDiscountPercent : 100;
@@ -91,7 +100,7 @@ export function PosSidebar(props: PosSidebarProps) {
       <Field label="طريقة الدفع (F7)">
         <div className={`grid gap-1`} style={{ gridTemplateColumns: `repeat(${Math.max(1, enabledMethods.length)}, minmax(0, 1fr))` }}>
           {enabledMethods.map((m, i) => {
-            const meta = m === "cash" ? { icon: "💵", label: "نقدي" } : { icon: "🏦", label: "بنكي" };
+            const meta = methodMeta[m];
             return (
               <button key={m} type="button" ref={i === 0 ? methodRef : undefined}
                 onClick={() => onPaymentMethod(m)}
@@ -103,11 +112,11 @@ export function PosSidebar(props: PosSidebarProps) {
         </div>
       </Field>
 
-      {paymentMethod === "bank" && (
+      {isDigital && (
         <>
-          <Field label="الحساب البنكي (F6)">
+          <Field label={paymentMethod === "bank" ? "الحساب البنكي (F6)" : "الحساب الإلكتروني (F6)"}>
             <div ref={accountRef} tabIndex={-1} className="grid grid-cols-3 gap-1 outline-none">
-              {bankAccounts.map((a) => (
+              {digitalAccounts.map((a) => (
                 <button key={a.id} type="button" onClick={() => onBankAccountId(a.id)}
                   className={`h-9 rounded-lg border text-xs font-medium ${bankAccountId === a.id ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
                   {a.name}
