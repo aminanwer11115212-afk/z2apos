@@ -138,4 +138,20 @@ function NewSale() {
   }, [q, parts]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageSafe = Math.min(page, page
+  const pageSafe = Math.min(page, pageCount);
+  const pageItems = useMemo(
+    () => filtered.slice((pageSafe - 1) * PAGE_SIZE, pageSafe * PAGE_SIZE),
+    [filtered, pageSafe]
+  );
+
+  useEffect(() => { setPage(1); }, [q]);
+
+  const availableFor = (partId: string) => {
+    const p = parts.find((x) => x.id === partId);
+    if (!p) return 0;
+    const inCart = lines.find((l) => l.part.id === partId)?.qty ?? 0;
+    return Math.max(0, Number(p.quantity) - inCart);
+  };
+
+  const addPart = (p: Part) => {
+    if (Number(p.quantity) <= 0) { toast.error(`الصنف ${p.name} غير متوفر في المخزون`); return
