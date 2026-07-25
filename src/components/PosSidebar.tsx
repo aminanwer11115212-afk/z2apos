@@ -1,19 +1,9 @@
 import { Field, Btn } from "@/components/ui-kit";
 import { formatSDG } from "@/lib/auth";
-import { computeTax } from "@/lib/settings";
-import { PaymentMethod, PAYMENT_METHODS } from "@/lib/payments";
-import { Account } from "@/lib/settings";
+import { computeTax, Settings, Account } from "@/lib/settings";
+import { PaymentMethod } from "@/lib/payments";
 import { UserPlus, CheckCircle2, Pause } from "lucide-react";
 import { useMemo } from "react";
-
-type Settings = {
-  storeName: string;
-  taxEnabled: boolean;
-  taxPercent: number;
-  paymentMethods: Record<PaymentMethod, { enabled: boolean; defaultAccountId: string; requireRef: boolean }>;
-  defaultMethod: PaymentMethod;
-  sellerPerms: { maxDiscountPercent: number };
-};
 
 type PosSidebarProps = {
   customers: { id: string; name: string; phone: string | null }[];
@@ -75,7 +65,7 @@ export function PosSidebar(props: PosSidebarProps) {
   const maxDiscount = total * (maxDiscPct / 100);
   const effectiveDiscount = Math.min(discount, maxDiscount);
   const net = Math.max(0, total - effectiveDiscount);
-  const tax = computeTax(net, settings as any);
+  const tax = computeTax(net, settings);
   const due = Math.max(0, tax.grand - paid);
 
   return (
