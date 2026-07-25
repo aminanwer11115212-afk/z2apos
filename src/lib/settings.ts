@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 export type PrintFormat = "a4" | "thermal80" | "thermal58";
-export type Account = { id: string; name: string; type: "cash" | "bank"; note?: string };
+export type Account = { id: string; name: string; type: "cash" | "bank" | "wallet"; note?: string };
 
 export type SellerPerms = {
   seeCost: boolean;
@@ -9,7 +9,7 @@ export type SellerPerms = {
   maxDiscountPercent: number; // 0-100
 };
 
-export type PaymentMethodKey = "cash" | "bank";
+export type PaymentMethodKey = "cash" | "bank" | "wallet";
 export type PaymentMethodConfig = {
   enabled: boolean;
   defaultAccountId: string;
@@ -65,13 +65,14 @@ const DEFAULTS: Settings = {
   defaultAccountId: "cash-default",
   accounts: [
     { id: "cash-default", name: "الصندوق النقدي", type: "cash" },
-    { id: "okash", name: "OKash", type: "bank" },
+    { id: "okash", name: "OKash", type: "wallet" },
     { id: "bankak", name: "بنكك", type: "bank" },
-    { id: "fawry", name: "فوري", type: "bank" },
+    { id: "fawry", name: "فوري", type: "wallet" },
   ],
   paymentMethods: {
     cash: { enabled: true, defaultAccountId: "cash-default", requireRef: false },
     bank: { enabled: true, defaultAccountId: "okash", requireRef: false },
+    wallet: { enabled: true, defaultAccountId: "okash", requireRef: false },
   },
   defaultMethod: "cash",
   waInvoiceTemplate: "السلام عليكم {name}،\nفاتورتك رقم {invoice} بمبلغ {total} — المتبقي {due}.\nشكراً لتعاملك مع {store}.",
@@ -103,6 +104,7 @@ function load(): Settings {
       paymentMethods: {
         cash: { ...DEFAULTS.paymentMethods.cash, ...(parsed.paymentMethods?.cash ?? {}) },
         bank: { ...DEFAULTS.paymentMethods.bank, ...(parsed.paymentMethods?.bank ?? {}) },
+        wallet: { ...DEFAULTS.paymentMethods.wallet, ...(parsed.paymentMethods?.wallet ?? {}) },
       },
       defaultMethod: parsed.defaultMethod ?? DEFAULTS.defaultMethod,
     };
