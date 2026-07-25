@@ -6,13 +6,9 @@ import { formatSDG, useMyRole } from "@/lib/auth";
 import { useSettings, encodeNotes, computeTax } from "@/lib/settings";
 import { type PaymentMethod } from "@/lib/payments";
 import { PosPart, PosLine, HeldSale, loadHeld, saveHeld } from "@/lib/pos";
-import { PageHeader } from "@/components/ui-kit";
-import { PosProductGrid } from "@/components/PosProductGrid";
-import { PosCart } from "@/components/PosCart";
-import { PosSidebar } from "@/components/PosSidebar";
+import { PosLayout } from "@/components/PosLayout";
 import { PosCustomerDialog, usePosCustomerDialog } from "@/components/PosCustomerDialog";
 import { PosHeldDialog } from "@/components/PosHeldDialog";
-import { Search, Keyboard, Pause, Play } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/sales/new")({
@@ -62,9 +58,12 @@ function NewSale() {
     queryFn: async () => { const { data, error } = await supabase.from("customers").select("id,name,phone").order("name"); if (error) throw error; return data as { id: string; name: string; phone: string | null }[]; },
   });
 
-  const availableFor = (partId: string) => { const p = parts.find((x) => x.id === partId); if (!p) return 0; const inCart = lines.find((l) => l.part.id === partId)?.qty ?? 0; return Math.max(0, Number(p.quantity) - inCart); };
-  const addPart = (p: PosPart) => { if (Number(p.quantity) <= 0) { toast.error(`الصنف ${p.name} غير متوفر`); return; } if (availableFor(p.id) < 1) { toast.error(`لا يوجد رصيد كافٍ من ${p.name} — المتاح: ${Number(p.quantity)}`); return; } setLines((prev) => { const i = prev.findIndex((l) => l.part.id === p.id); if (i >= 0) { const nx = [...prev]; nx[i] = { ...nx[i], qty: nx[i].qty + 1 }; return nx; } return [...prev, { part: p, qty: 1, unit_price: Number(p.sell_price) }]; }); };
-  const setQty = (id: string, qty: number) => { const part = parts.find((x) => x.id === id); const max = part ? Number(part.quantity) : Infinity; setLines((p) => p.map((l) => l.part.id === id ? { ...l, qty: Math.max(0.01, Math.min(qty, max)) } : l)); };
+  const addPart = (p: PosPart) => {
+    const available = Math.max(0, Number(p.quantity) - (lines.find((l) => l.part.id === p.id)?.qty ?? 0));
+    if (available < 1) { toast.error(`لا يوجد رصيد كافٍ من ${p.name} — المتاح: ${Number(p.quantity)}`); return; }
+    setLines((prev) => { const i = prev.findIndex((l) => l.part.id === p.id); if (i >= 0) { const nx = [...prev]; nx[i] = { ...nx[i], qty: nx[i].qty + 1 }; return nx; } return [...prev, { part: p, qty: 1, unit_price: Number(p.sell_price) }]; });
+  };
+  const setQty = (id: string, qty: number) => { const max = Number(parts.find((x) => x.id === id)?.quantity ?? Infinity); setLines((p) => p.map((l) => l.part.id === id ? { ...l, qty: Math.max(0.01, Math.min(qty, max)) } : l)); };
   const setPrice = (id: string, price: number) => setLines((p) => p.map((l) => l.part.id === id ? { ...l, unit_price: Math.max(0, price) } : l));
   const remove = (id: string) => setLines((p) => p.filter((l) => l.part.id !== id));
 
@@ -76,9 +75,10 @@ function NewSale() {
   const due = Math.max(0, tax.grand - paid);
   const payFull = () => setPaid(tax.grand);
 
-  const hold = () => { if (lines.length === 0) { toast.error("لا توجد أصناف للتعليق"); return; } const entry: HeldSale = { id: crypto.randomUUID(), savedAt: new Date().toISOString(), lines, customerId, discount, paid, notes, paymentMethod, bankAccountId, txRef }; const nx = [entry, ...held].slice(0, 20); setHeld(nx); saveHeld(nx); setLines([]); setDiscount(0); setPaid(0); setNotes(""); setCustomerId(""); setTxRef(""); toast.success("تم تعليق الفاتورة"); searchRef.current?.focus(); };
+  const hold = () => { if (lines.length === 0) return toast.error("لا توجد أصناف للتعليق"); const entry: HeldSale = { id: crypto.randomUUID(), savedAt: new Date().toISOString(), lines, customerId, discount, paid, notes, paymentMethod, bankAccountId, txRef }; const nx = [entry, ...held].slice(0, 20); setHeld(nx); saveHeld(nx); setLines([]); setDiscount(0); setPaid(0); setNotes(""); setCustomerId(""); setTxRef(""); toast.success("تم تعليق الفاتورة"); searchRef.current?.focus(); };
   const resume = (h: HeldSale) => { setLines(h.lines); setCustomerId(h.customerId); setDiscount(h.discount); setPaid(h.paid); setNotes(h.notes); setPaymentMethod(h.paymentMethod); if (h.bankAccountId) setBankAccountId(h.bankAccountId); setTxRef(h.txRef ?? ""); const nx = held.filter((x) => x.id !== h.id); setHeld(nx); saveHeld(nx); setHoldOpen(false); toast.success("تم استعادة الفاتورة"); };
   const dropHeld = (id: string) => { const nx = held.filter((x) => x.id !== id); setHeld(nx); saveHeld(nx); };
+  const clear = () => { setLines([]); setDiscount(0); setPaid(0); setNotes(""); setCustomerId(""); setTxRef(""); };
 
   const save = useMutation({
     mutationFn: async () => {
@@ -108,4 +108,33 @@ function NewSale() {
       else if (e.key === "F9") { e.preventDefault(); if (lines.length && !save.isPending) save.mutate(); }
       else if (e.key === "F8") { e.preventDefault(); hold(); }
       else if (!inField && (e.key === "+" || e.key === "=")) { const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part.id, last.qty + 1); } }
-      else if (!inField && (e.key === "-" || e.key === "_")) { const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part
+      else if (!inField && (e.key === "-" || e.key === "_")) { const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part.id, Math.max(0.01, last.qty - 1)); } }
+    };
+    window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
+  }, [lines, save, paymentMethod]);
+
+  const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === "Escape") setQ(""); };
+
+  return (
+    <>
+      <PosLayout
+        q={q} setQ={setQ} searchRef={searchRef} onSearchKey={onSearchKey}
+        parts={parts} onAdd={addPart}
+        lines={lines} canEditPrice={canEditPrice} onQty={setQty} onPrice={setPrice} onRemove={remove}
+        customers={customers} customerId={customerId} onCustomerId={setCustomerId} onAddCustomer={custDialog.open} customerRef={customerRef}
+        paymentMethod={paymentMethod} onPaymentMethod={setPaymentMethod} methodRef={methodRef}
+        bankAccountId={bankAccountId} onBankAccountId={setBankAccountId} accountRef={accountRef}
+        txRef={txRef} onTxRef={setTxRef}
+        discount={discount} onDiscount={setDiscount}
+        paid={paid} onPaid={setPaid}
+        notes={notes} onNotes={setNotes}
+        total={total} settings={settings} isSeller={isSeller} accounts={settings.accounts} lines={lines}
+        onPayFull={payFull} onHold={hold} onClear={clear} onSave={() => save.mutate()} savePending={save.isPending}
+        holdOpen={holdOpen} setHoldOpen={setHoldOpen} held={held} onResume={resume} onDrop={dropHeld}
+        custDialog={{ isOpen: custDialog.isOpen, close: custDialog.close, form: custDialog.form, setForm: custDialog.setForm, save: custDialog.save }}
+      />
+      <PosCustomerDialog isOpen={custDialog.isOpen} onClose={custDialog.close} form={custDialog.form} setForm={custDialog.setForm} save={custDialog.save} />
+      <PosHeldDialog open={holdOpen} onClose={() => setHoldOpen(false)} held={held} onResume={resume} onDrop={dropHeld} />
+    </>
+  );
+}
