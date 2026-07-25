@@ -83,18 +83,4 @@ function CustomerStatement() {
             )}
             <Btn variant="outline" onClick={() => setPayOpen(true)}>
               <Wallet className="w-4 h-4 inline ml-1" />
-              {Number(cust.balance) > 0 ? `تحصيل (${formatSDG(cust.balance)})` : "إيداع مقدم"}
-            </Btn>
-            {waHref && (
-              <a href={waHref} target="_blank" rel="noreferrer">
-                <Btn variant="outline"><MessageCircle className="w-4 h-4 inline ml-1" />تذكير واتساب</Btn>
-              </a>
-            )}
-            <Btn onClick={() => window.print()}><Printer className="w-4 h-4 inline ml-1" />طباعة</Btn>
-          </div>} />
-        <Link to="/customers" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-3">
-          <ArrowRight className="w-4 h-4" />العودة للعملاء
-        </Link>
-      </div>
-
-      <div className="print-area bg-card border rounded-2
+              {Number(cust.balance) > 0 ? `تحصيل (${formatSDG(c
