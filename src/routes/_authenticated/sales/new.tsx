@@ -7,8 +7,7 @@ import { useSettings, encodeNotes, computeTax } from "@/lib/settings";
 import { type PaymentMethod } from "@/lib/payments";
 import { PosPart, PosLine, HeldSale, loadHeld, saveHeld } from "@/lib/pos";
 import { PosLayout } from "@/components/PosLayout";
-import { PosCustomerDialog, usePosCustomerDialog } from "@/components/PosCustomerDialog";
-import { PosHeldDialog } from "@/components/PosHeldDialog";
+import { usePosCustomerDialog } from "@/components/PosCustomerDialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/sales/new")({
@@ -108,33 +107,4 @@ function NewSale() {
       else if (e.key === "F9") { e.preventDefault(); if (lines.length && !save.isPending) save.mutate(); }
       else if (e.key === "F8") { e.preventDefault(); hold(); }
       else if (!inField && (e.key === "+" || e.key === "=")) { const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part.id, last.qty + 1); } }
-      else if (!inField && (e.key === "-" || e.key === "_")) { const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part.id, Math.max(0.01, last.qty - 1)); } }
-    };
-    window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
-  }, [lines, save, paymentMethod]);
-
-  const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === "Escape") setQ(""); };
-
-  return (
-    <>
-      <PosLayout
-        q={q} setQ={setQ} searchRef={searchRef} onSearchKey={onSearchKey}
-        parts={parts} onAdd={addPart}
-        lines={lines} canEditPrice={canEditPrice} onQty={setQty} onPrice={setPrice} onRemove={remove}
-        customers={customers} customerId={customerId} onCustomerId={setCustomerId} onAddCustomer={custDialog.open} customerRef={customerRef}
-        paymentMethod={paymentMethod} onPaymentMethod={setPaymentMethod} methodRef={methodRef}
-        bankAccountId={bankAccountId} onBankAccountId={setBankAccountId} accountRef={accountRef}
-        txRef={txRef} onTxRef={setTxRef}
-        discount={discount} onDiscount={setDiscount}
-        paid={paid} onPaid={setPaid}
-        notes={notes} onNotes={setNotes}
-        total={total} settings={settings} isSeller={isSeller} accounts={settings.accounts} lines={lines}
-        onPayFull={payFull} onHold={hold} onClear={clear} onSave={() => save.mutate()} savePending={save.isPending}
-        holdOpen={holdOpen} setHoldOpen={setHoldOpen} held={held} onResume={resume} onDrop={dropHeld}
-        custDialog={{ isOpen: custDialog.isOpen, close: custDialog.close, form: custDialog.form, setForm: custDialog.setForm, save: custDialog.save }}
-      />
-      <PosCustomerDialog isOpen={custDialog.isOpen} onClose={custDialog.close} form={custDialog.form} setForm={custDialog.setForm} save={custDialog.save} />
-      <PosHeldDialog open={holdOpen} onClose={() => setHoldOpen(false)} held={held} onResume={resume} onDrop={dropHeld} />
-    </>
-  );
-}
+      else if (!inField && (e.key === "-" || e.key === "_")) { const last = lines[lines.length - 1]; if (
