@@ -6,7 +6,7 @@ import { formatSDG, useMyRole } from "@/lib/auth";
 import { useSettings, encodeNotes, computeTax } from "@/lib/settings";
 import { type PaymentMethod } from "@/lib/payments";
 import { PosPart, PosLine, HeldSale, loadHeld, saveHeld } from "@/lib/pos";
-import { PageHeader, Modal } from "@/components/ui-kit";
+import { PageHeader } from "@/components/ui-kit";
 import { PosProductGrid } from "@/components/PosProductGrid";
 import { PosCart } from "@/components/PosCart";
 import { PosSidebar } from "@/components/PosSidebar";
@@ -155,8 +155,3 @@ function NewSale() {
         />
       </div>
 
-      <PosCustomerDialog isOpen={custDialog.isOpen} onClose={custDialog.close} form={custDialog.form} setForm={custDialog.setForm} save={custDialog.save} />
-      <PosHeldDialog open={holdOpen} onClose={() => setHoldOpen(false)} held={held} onResume={resume} onDrop={dropHeld} />
-    </div>
-  );
-}
