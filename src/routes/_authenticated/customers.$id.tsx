@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
 import { useSettings, renderTemplate } from "@/lib/settings";
 import { paymentMethodLabel } from "@/lib/payments";
+import { whatsappUrl } from "@/lib/utils";
 import { Btn, PageHeader } from "@/components/ui-kit";
 import { PaymentDialog } from "@/components/PaymentDialog";
 import { Logo } from "@/components/Logo";
@@ -64,11 +65,12 @@ function CustomerStatement() {
   if (!cust) return <div className="p-8 text-center text-muted-foreground">جاري التحميل...</div>;
 
   const waHref = cust.phone
-    ? `https://wa.me/${cust.phone.replace(/[^\d]/g, "")}?text=${encodeURIComponent(
+    ? whatsappUrl(
+        cust.phone,
         renderTemplate(settings.waReminderTemplate, {
           name: cust.name, balance: formatSDG(cust.balance), store: settings.storeName,
         })
-      )}`
+      )
     : undefined;
 
   return (
@@ -138,4 +140,16 @@ function CustomerStatement() {
               <td className={`p-2 ${totals.balance > 0 ? "text-destructive" : ""}`}>{formatSDG(totals.balance)}</td>
               <td className="p-2"></td>
             </tr>
-         
+          </tbody>
+        </table>
+      </div>
+
+      {payOpen && (
+        <PaymentDialog open={payOpen} onClose={() => setPayOpen(false)}
+          direction="in"
+          party={{ id: cust.id, name: cust.name, balance: Number(cust.balance) }}
+          suggested={Number(cust.balance)} />
+      )}
+    </div>
+  );
+}
