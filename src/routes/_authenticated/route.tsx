@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMyRole, useSession, useSignOut } from "@/lib/auth";
 import {
   LayoutDashboard, Package, ShoppingCart, Truck, Users, Building2, BarChart3,
-  UserCog, LogOut, Menu, Database, Settings as SettingsIcon, ChevronDown, Zap
+  UserCog, LogOut, Menu, Database, Settings as SettingsIcon, ChevronDown, Zap, Wallet
 } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "@/components/Logo";
@@ -48,8 +48,9 @@ const GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "التحليل",
+    label: "المالية",
     items: [
+      { to: "/accounts", label: "الحسابات", Icon: Wallet },
       { to: "/reports", label: "التقارير", Icon: BarChart3 },
     ],
   },
@@ -68,7 +69,7 @@ const MOBILE_NAV: NavItem[] = [
   { to: "/dashboard", label: "الرئيسية", Icon: LayoutDashboard },
   { to: "/parts", label: "المخزون", Icon: Package },
   { to: "/sales/new", label: "بيع", Icon: Zap },
-  { to: "/sales", label: "الفواتير", Icon: BarChart3 },
+  { to: "/accounts", label: "الحسابات", Icon: Wallet },
 ];
 
 function AuthedLayout() {
@@ -127,7 +128,7 @@ function AuthedLayout() {
                 <NavLink item={HOME} path={path} onClick={() => setMobileOpen(false)} />
                 {visibleGroups.map((g) => (
                   <SidebarGroup key={g.label} group={g} path={path} onNavigate={() => setMobileOpen(false)} defaultOpen />
-                ))}
+                )}
               </nav>
             </aside>
           </div>
