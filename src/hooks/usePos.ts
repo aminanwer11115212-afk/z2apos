@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useMyRole } from "@/lib/auth";
 import { useSettings, encodeNotes, computeTax } from "@/lib/settings";
-import { type PaymentMethod, PAYMENT_METHODS } from "@/lib/payments";
+import { type PaymentMethod } from "@/lib/payments";
 import { PosPart, PosLine, HeldSale, loadHeld, saveHeld } from "@/lib/pos";
 import { usePosCustomerDialog } from "@/components/PosCustomerDialog";
 import { toast } from "sonner";
@@ -101,28 +101,4 @@ export function usePos() {
       else if (e.key === "F7") { e.preventDefault(); methodRef.current?.focus(); }
       else if (e.key === "F9") { e.preventDefault(); if (lines.length && !save.isPending) save.mutate(); }
       else if (e.key === "F8") { e.preventDefault(); hold(); }
-      else if (!inField && (e.key === "+" || e.key === "=")) { const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part.id, last.qty + 1); } }
-      else if (!inField && (e.key === "-" || e.key === "_")) { const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part.id, Math.max(0.01, last.qty - 1)); } }
-    };
-    window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
-  }, [lines, save, paymentMethod, isDigital]);
-
-  const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === "Escape") setQ(""); };
-
-  return {
-    q, setQ, searchRef, onSearchKey,
-    parts, customers,
-    lines, canEditPrice, setQty, setPrice, remove, addPart,
-    customerId, setCustomerId, customerRef,
-    paymentMethod, setPaymentMethod, methodRef,
-    bankAccountId, setBankAccountId, accountRef,
-    txRef, setTxRef,
-    discount, setDiscount,
-    paid, setPaid,
-    notes, setNotes,
-    total, settings, isSeller, accounts: settings.accounts,
-    payFull, hold, clear, save,
-    holdOpen, setHoldOpen, held, resume, dropHeld,
-    custDialog,
-  };
-}
+      else if (!inField && (e.key === "+" || e.key === "=")) { const last = lines[lines.length - 1]; if (last) { e.prevent
