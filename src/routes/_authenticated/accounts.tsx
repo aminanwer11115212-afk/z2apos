@@ -1,9 +1,9 @@
+import React, { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
-import { Btn, PageHeader, Field, Input, Modal, SearchBar, useDialog } from "@/components/ui-kit";
+import { Btn, PageHeader, Field, Input, Modal, useDialog } from "@/components/ui-kit";
 import { Plus, ArrowLeftRight, Banknote, CreditCard, Wallet, TrendingUp, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
 
@@ -116,80 +116,4 @@ function AccountsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-end">
-        <div className="flex gap-2">
-          <button onClick={() => setSelected("all")} className={`px-3 py-1.5 rounded-lg text-sm border ${selected === "all" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>الكل</button>
-          {accounts.map((a) => (
-            <button key={a.id} onClick={() => setSelected(a.id)} className={`px-3 py-1.5 rounded-lg text-sm border ${selected === a.id ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>{a.name}</button>
-          ))}
-        </div>
-        <div className="flex gap-2 items-center">
-          <Field label="من"><Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} /></Field>
-          <Field label="إلى"><Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} /></Field>
-        </div>
-      </div>
-
-      {/* Transactions */}
-      <div className="bg-card border rounded-2xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-muted text-muted-foreground">
-            <tr>
-              <th className="text-right p-3 font-medium">التاريخ</th>
-              <th className="text-right p-3 font-medium">الحساب</th>
-              <th className="text-right p-3 font-medium">النوع</th>
-              <th className="text-right p-3 font-medium">المبلغ</th>
-              <th className="text-right p-3 font-medium">الرصيد</th>
-              <th className="text-right p-3 font-medium">ملاحظة</th>
-            </tr>
-          </thead>
-          <tbody>
-            {txns.map((t) => {
-              const acc = accounts.find((a) => a.id === t.account_id);
-              return (
-                <tr key={t.id} className="border-t hover:bg-muted/50">
-                  <td className="p-3">{new Date(t.created_at).toLocaleString("ar-SD", { dateStyle: "short", timeStyle: "short" })}</td>
-                  <td className="p-3 font-medium">{acc?.name ?? t.account_id}</td>
-                  <td className="p-3"><TxnBadge type={t.type} /></td>
-                  <td className="p-3 font-semibold">{formatSDG(t.amount)}</td>
-                  <td className="p-3 text-muted-foreground">{formatSDG(acc?.balance ?? 0)}</td>
-                  <td className="p-3 text-muted-foreground">{[t.reference, t.notes].filter(Boolean).join(" · ") || "—"}</td>
-                </tr>
-              );
-            })}
-            {txns.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">لا توجد معاملات</td></tr>}
-          </tbody>
-        </table>
-      </div>
-
-      <Modal open={addDialog.open} onClose={addDialog.hide} title="حساب جديد"
-        footer={<>
-          <Btn variant="outline" onClick={addDialog.hide}>إلغاء</Btn>
-          <Btn onClick={addAccount} disabled={!newAcc.name.trim()}>حفظ</Btn>
-        </>}>
-        <div className="space-y-3">
-          <Field label="الاسم *"><Input value={newAcc.name} onChange={(e) => setNewAcc({ ...newAcc, name: e.target.value })} /></Field>
-          <Field label="النوع">
-            <select value={newAcc.type} onChange={(e) => setNewAcc({ ...newAcc, type: e.target.value as any })}
-              className="w-full h-11 px-3 rounded-lg border bg-background">
-              <option value="cash">نقدي</option>
-              <option value="bank">بنكي</option>
-              <option value="wallet">محفظة</option>
-            </select>
-          </Field>
-          <Field label="الكود/الرقم"><Input value={newAcc.code} onChange={(e) => setNewAcc({ ...newAcc, code: e.target.value })} /></Field>
-        </div>
-      </Modal>
-    </div>
-  );
-}
-
-function TxnBadge({ type }: { type: string }) {
-  const map: Record<string, { label: string; cls: string }> = {
-    income: { label: "وارد", cls: "bg-success/10 text-success" },
-    expense: { label: "صادر", cls: "bg-destructive/10 text-destructive" },
-    transfer_in: { label: "تحويل وارد", cls: "bg-primary/10 text-primary" },
-    transfer_out: { label: "تحويل صادر", cls: "bg-warning/10 text-warning" },
-  };
-  const m = map[type] ?? { label: type, cls: "bg-muted" };
-  return <span className={`px-2 py-1 rounded-full text-xs font-medium ${m.cls}`}>{m.label}</span>;
-}
+      <div className="flex flex-wrap gap-3 items
