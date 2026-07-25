@@ -4,7 +4,7 @@ import { PosCart } from "./PosCart";
 import { PosSidebar } from "./PosSidebar";
 import { PosCustomerDialog } from "./PosCustomerDialog";
 import { PosHeldDialog } from "./PosHeldDialog";
-import { Search, Keyboard, Play, Plus } from "lucide-react";
+import { Search, Keyboard, Play } from "lucide-react";
 import type { PosPart, PosLine, HeldSale } from "@/lib/pos";
 import type { Settings } from "@/lib/settings";
 import type { PaymentMethod } from "@/lib/payments";
