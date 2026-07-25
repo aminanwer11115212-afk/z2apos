@@ -5,18 +5,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatSDG, useMyRole } from "@/lib/auth";
 import { useSettings, encodeNotes, computeTax } from "@/lib/settings";
 import { type PaymentMethod } from "@/lib/payments";
-import { PosPart, PosLine, HeldSale, HOLD_KEY, loadHeld, saveHeld } from "@/lib/pos";
+import { PosPart, PosLine, HeldSale, loadHeld, saveHeld } from "@/lib/pos";
 import { Field, Btn, PageHeader, Modal, Input, useDialog } from "@/components/ui-kit";
 import { PosProductGrid } from "@/components/PosProductGrid";
 import { PosCart } from "@/components/PosCart";
 import { PosSidebar } from "@/components/PosSidebar";
-import { Search, Keyboard, Pause, Play, UserPlus } from "lucide-react";
+import { Search, Keyboard, Pause, Play, UserPlus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/sales/new")({
   head: () => ({ meta: [{ title: "بيع سريع — 2A" }] }),
   component: NewSale,
 });
+
+type Cust = { id: string; name: string; phone: string | null };
 
 function NewSale() {
   const qc = useQueryClient();
@@ -30,20 +32,14 @@ function NewSale() {
 
   const bankAccounts = useMemo(() => settings.accounts.filter((a) => a.type === "bank"), [settings.accounts]);
   const cashAccount = useMemo(() => settings.accounts.find((a) => a.type === "cash") ?? settings.accounts[0], [settings.accounts]);
-  const enabledMethods = useMemo(
-    () => (Object.keys(settings.paymentMethods) as ("cash" | "bank")[]).filter((k) => settings.paymentMethods[k].enabled),
-    [settings.paymentMethods],
-  );
-  const initialMethod: PaymentMethod = enabledMethods.includes(settings.defaultMethod)
-    ? settings.defaultMethod : (enabledMethods[0] ?? "cash");
+  const enabledMethods = useMemo(() => (Object.keys(settings.paymentMethods) as ("cash" | "bank")[]).filter((k) => settings.paymentMethods[k].enabled), [settings.paymentMethods]);
+  const initialMethod: PaymentMethod = enabledMethods.includes(settings.defaultMethod) ? settings.defaultMethod : (enabledMethods[0] ?? "cash");
 
   const [q, setQ] = useState("");
   const [lines, setLines] = useState<PosLine[]>([]);
   const [customerId, setCustomerId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(initialMethod);
-  const [bankAccountId, setBankAccountId] = useState<string>(
-    settings.paymentMethods.bank.defaultAccountId || bankAccounts[0]?.id || ""
-  );
+  const [bankAccountId, setBankAccountId] = useState<string>(settings.paymentMethods.bank.defaultAccountId || bankAccounts[0]?.id || "");
   const [txRef, setTxRef] = useState("");
   const [discount, setDiscount] = useState(0);
   const [paid, setPaid] = useState(0);
@@ -58,70 +54,23 @@ function NewSale() {
   const custDialog = useDialog();
   const holdDialog = useDialog();
 
-  const { data: parts = [] } = useQuery({
-    queryKey: ["parts-lite"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("parts").select("id,code,name,sell_price,quantity").order("name");
-      if (error) throw error;
-      return data as PosPart[];
-    },
-  });
-
-  const { data: customers = [] } = useQuery({
-    queryKey: ["customers-lite-phone"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("customers").select("id,name,phone").order("name");
-      if (error) throw error;
-      return data as { id: string; name: string; phone: string | null }[];
-    },
-  });
+  const { data: parts = [] } = useQuery({ queryKey: ["parts-lite"], queryFn: async () => { const { data, error } = await supabase.from("parts").select("id,code,name,sell_price,quantity").order("name"); if (error) throw error; return data as PosPart[]; } });
+  const { data: customers = [] } = useQuery({ queryKey: ["customers-lite-phone"], queryFn: async () => { const { data, error } = await supabase.from("customers").select("id,name,phone").order("name"); if (error) throw error; return data as Cust[]; } });
 
   const addCustomer = useMutation({
     mutationFn: async () => {
       if (!newCust.name.trim()) throw new Error("الاسم مطلوب");
-      const { data, error } = await supabase.from("customers")
-        .insert({ name: newCust.name.trim(), phone: newCust.phone.trim() || null })
-        .select("id").single();
-      if (error) throw error;
-      return data.id as string;
+      const { data, error } = await supabase.from("customers").insert({ name: newCust.name.trim(), phone: newCust.phone.trim() || null }).select("id").single();
+      if (error) throw error; return data.id as string;
     },
-    onSuccess: (id) => {
-      toast.success("تمت إضافة العميل");
-      setCustomerId(id);
-      setNewCust({ name: "", phone: "" });
-      custDialog.hide();
-      qc.invalidateQueries({ queryKey: ["customers-lite-phone"] });
-      qc.invalidateQueries({ queryKey: ["customers"] });
-    },
+    onSuccess: (id) => { setCustomerId(id); setNewCust({ name: "", phone: "" }); custDialog.hide(); toast.success("تمت إضافة العميل"); qc.invalidateQueries({ queryKey: ["customers-lite-phone"] }); qc.invalidateQueries({ queryKey: ["customers"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const availableFor = (partId: string) => {
-    const p = parts.find((x) => x.id === partId);
-    if (!p) return 0;
-    const inCart = lines.find((l) => l.part.id === partId)?.qty ?? 0;
-    return Math.max(0, Number(p.quantity) - inCart);
-  };
-
-  const addPart = (p: PosPart) => {
-    if (Number(p.quantity) <= 0) { toast.error(`الصنف ${p.name} غير متوفر في المخزون`); return; }
-    if (availableFor(p.id) < 1) { toast.error(`لا يوجد رصيد كافٍ من ${p.name} — المتاح: ${Number(p.quantity)}`); return; }
-    setLines((prev) => {
-      const i = prev.findIndex((l) => l.part.id === p.id);
-      if (i >= 0) { const nx = [...prev]; nx[i] = { ...nx[i], qty: nx[i].qty + 1 }; return nx; }
-      return [...prev, { part: p, qty: 1, unit_price: Number(p.sell_price) }];
-    });
-  };
-
-  const setQty = (id: string, qty: number) => {
-    const part = parts.find((x) => x.id === id);
-    const max = part ? Number(part.quantity) : Infinity;
-    const target = Math.max(0.01, Math.min(qty, max));
-    setLines((p) => p.map((l) => l.part.id === id ? { ...l, qty: target } : l));
-  };
-
-  const setPrice = (id: string, price: number) =>
-    setLines((p) => p.map((l) => l.part.id === id ? { ...l, unit_price: Math.max(0, price) } : l));
+  const availableFor = (partId: string) => { const p = parts.find((x) => x.id === partId); if (!p) return 0; const inCart = lines.find((l) => l.part.id === partId)?.qty ?? 0; return Math.max(0, Number(p.quantity) - inCart); };
+  const addPart = (p: PosPart) => { if (Number(p.quantity) <= 0) { toast.error(`الصنف ${p.name} غير متوفر`); return; } if (availableFor(p.id) < 1) { toast.error(`لا يوجد رصيد كافٍ من ${p.name} — المتاح: ${Number(p.quantity)}`); return; } setLines((prev) => { const i = prev.findIndex((l) => l.part.id === p.id); if (i >= 0) { const nx = [...prev]; nx[i] = { ...nx[i], qty: nx[i].qty + 1 }; return nx; } return [...prev, { part: p, qty: 1, unit_price: Number(p.sell_price) }]; }); };
+  const setQty = (id: string, qty: number) => { const part = parts.find((x) => x.id === id); const max = part ? Number(part.quantity) : Infinity; setLines((p) => p.map((l) => l.part.id === id ? { ...l, qty: Math.max(0.01, Math.min(qty, max)) } : l)); };
+  const setPrice = (id: string, price: number) => setLines((p) => p.map((l) => l.part.id === id ? { ...l, unit_price: Math.max(0, price) } : l));
   const remove = (id: string) => setLines((p) => p.filter((l) => l.part.id !== id));
 
   const total = lines.reduce((s, l) => s + l.qty * l.unit_price, 0);
@@ -130,53 +79,41 @@ function NewSale() {
   const net = Math.max(0, total - effectiveDiscount);
   const tax = computeTax(net, settings);
   const due = Math.max(0, tax.grand - paid);
-
   const payFull = () => setPaid(tax.grand);
 
-  const hold = () => {
-    if (lines.length === 0) { toast.error("لا توجد أصناف للتعليق"); return; }
-    const entry: HeldSale = {
-      id: crypto.randomUUID(), savedAt: new Date().toISOString(),
-      lines, customerId, discount, paid, notes, paymentMethod, bankAccountId, txRef,
-    };
-    const nx = [entry, ...held].slice(0, 20);
-    setHeld(nx); saveHeld(nx);
-    setLines([]); setDiscount(0); setPaid(0); setNotes(""); setCustomerId(""); setTxRef("");
-    toast.success("تم تعليق الفاتورة");
-    searchRef.current?.focus();
-  };
-  const resume = (h: HeldSale) => {
-    setLines(h.lines); setCustomerId(h.customerId); setDiscount(h.discount);
-    setPaid(h.paid); setNotes(h.notes); setPaymentMethod(h.paymentMethod);
-    if (h.bankAccountId) setBankAccountId(h.bankAccountId);
-    setTxRef(h.txRef ?? "");
-    const nx = held.filter((x) => x.id !== h.id);
-    setHeld(nx); saveHeld(nx);
-    holdDialog.hide();
-    toast.success("تم استعادة الفاتورة");
-  };
-  const dropHeld = (id: string) => {
-    const nx = held.filter((x) => x.id !== id);
-    setHeld(nx); saveHeld(nx);
-  };
+  const hold = () => { if (lines.length === 0) { toast.error("لا توجد أصناف للتعليق"); return; } const entry: HeldSale = { id: crypto.randomUUID(), savedAt: new Date().toISOString(), lines, customerId, discount, paid, notes, paymentMethod, bankAccountId, txRef }; const nx = [entry, ...held].slice(0, 20); setHeld(nx); saveHeld(nx); setLines([]); setDiscount(0); setPaid(0); setNotes(""); setCustomerId(""); setTxRef(""); toast.success("تم تعليق الفاتورة"); searchRef.current?.focus(); };
+  const resume = (h: HeldSale) => { setLines(h.lines); setCustomerId(h.customerId); setDiscount(h.discount); setPaid(h.paid); setNotes(h.notes); setPaymentMethod(h.paymentMethod); if (h.bankAccountId) setBankAccountId(h.bankAccountId); setTxRef(h.txRef ?? ""); const nx = held.filter((x) => x.id !== h.id); setHeld(nx); saveHeld(nx); holdDialog.hide(); toast.success("تم استعادة الفاتورة"); };
+  const dropHeld = (id: string) => { const nx = held.filter((x) => x.id !== id); setHeld(nx); saveHeld(nx); };
 
   const save = useMutation({
     mutationFn: async () => {
       if (lines.length === 0) throw new Error("لا توجد أصناف");
-      for (const l of lines) {
-        const avail = Number(l.part.quantity);
-        if (l.qty > avail) throw new Error(`الكمية المطلوبة من ${l.part.name} (${l.qty}) تتجاوز المتاح (${avail})`);
-      }
-      const methodCfg = settings.paymentMethods[paymentMethod as "cash" | "bank"];
-      if (methodCfg?.requireRef && !txRef.trim()) throw new Error("رقم العملية مطلوب لهذه الطريقة");
-      const { data: userRes } = await supabase.auth.getUser();
-      const uid = userRes.user?.id;
-      if (!uid) throw new Error("يجب تسجيل الدخول");
-      const acc = paymentMethod === "bank"
-        ? bankAccounts.find((a) => a.id === bankAccountId)
-        : cashAccount;
+      for (const l of lines) { const avail = Number(l.part.quantity); if (l.qty > avail) throw new Error(`الكمية المطلوبة من ${l.part.name} (${l.qty}) تتجاوز المتاح (${avail})`); }
+      const methodCfg = settings.paymentMethods[paymentMethod as "cash" | "bank"]; if (methodCfg?.requireRef && !txRef.trim()) throw new Error("رقم العملية مطلوب");
+      const { data: userRes } = await supabase.auth.getUser(); const uid = userRes.user?.id; if (!uid) throw new Error("يجب تسجيل الدخول");
+      const acc = paymentMethod === "bank" ? bankAccounts.find((a) => a.id === bankAccountId) : cashAccount;
       const ref = paymentMethod === "bank" ? txRef.trim() : "";
       const finalNotes = acc ? encodeNotes(acc.name, notes, ref) : notes;
-      const { data: sale, error: e1 } = await supabase.from("sales").insert({
-        customer_id: customerId || null,
-        discount: effectiveDiscount, paid, notes: finalNotes || null
+      const { data: sale, error: e1 } = await supabase.from("sales").insert({ customer_id: customerId || null, discount: effectiveDiscount, paid, notes: finalNotes || null, created_by: uid, payment_method: paymentMethod, account_name: acc?.name ?? null }).select("id, invoice_no").single();
+      if (e1) throw e1;
+      const items = lines.map((l) => ({ sale_id: sale.id, part_id: l.part.id, qty: l.qty, unit_price: l.unit_price }));
+      const { error: e2 } = await supabase.from("sale_items").insert(items); if (e2) throw e2;
+      return sale;
+    },
+    onSuccess: (sale) => { toast.success(`تم حفظ الفاتورة #${sale.invoice_no}`); qc.invalidateQueries(); nav({ to: "/sales/$id", params: { id: sale.id } }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  useEffect(() => { searchRef.current?.focus(); }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName;
+      const inField = tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA";
+      if (e.key === "F2" || (e.key === "/" && !inField)) { e.preventDefault(); searchRef.current?.focus(); searchRef.current?.select(); }
+      else if (e.key === "F4") { e.preventDefault(); customerRef.current?.focus(); }
+      else if (e.key === "F6") { e.preventDefault(); if (paymentMethod !== "bank") setPaymentMethod("bank"); setTimeout(() => accountRef.current?.focus(), 0); }
+      else if (e.key === "F7") { e.preventDefault(); methodRef.current?.focus(); }
+      else if (e.key === "F9") { e.preventDefault(); if (lines.length && !save.isPending) save.mutate(); }
+      else if (e.key === "F8") { e.preventDefault(); hold(); }
+      else if (!inField && (e.key === "+" || e.key === "=")) { const last = lines[lines
