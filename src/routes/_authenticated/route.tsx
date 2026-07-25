@@ -128,7 +128,7 @@ function AuthedLayout() {
                 <NavLink item={HOME} path={path} onClick={() => setMobileOpen(false)} />
                 {visibleGroups.map((g) => (
                   <SidebarGroup key={g.label} group={g} path={path} onNavigate={() => setMobileOpen(false)} defaultOpen />
-                )}
+                ))}
               </nav>
             </aside>
           </div>
