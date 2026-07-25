@@ -150,4 +150,7 @@ function SettingsPage() {
       <Section title="صلاحيات البائع" icon={<Shield className="w-4 h-4" />}>
         <div className="grid sm:grid-cols-3 gap-3">
           <Field label="رؤية سعر التكلفة"><label className="flex items-center gap-2 h-11 px-3 rounded-lg border bg-background cursor-pointer"><input type="checkbox" checked={s.sellerPerms.seeCost} onChange={(e) => saveSettings({ sellerPerms: { ...s.sellerPerms, seeCost: e.target.checked } })} /><span className="text-sm">يستطيع رؤية التكلفة</span></label></Field>
-          <Field label="تعديل السعر في البيع"><label className="flex items-center gap-2 h-11 px-3 rounded-lg border bg-background cursor-pointer"><input type="checkbox" checked={s.sellerPerms.editPrice} onChange={(e) => saveSettings({ sellerPerms: { ...s.sellerPerms, editPrice: e.target.checked } })} /><span className
+          <Field label="تعديل السعر في البيع"><label className="flex items-center gap-2 h-11 px-3 rounded-lg border bg-background cursor-pointer"><input type="checkbox" checked={s.sellerPerms.editPrice} onChange={(e) => saveSettings({ sellerPerms: { ...s.sellerPerms, editPrice: e.target.checked } })} /><span className="text-sm">يستطيع تعديل السعر</span></label></Field>
+          <Field label="أقصى نسبة خصم %"><Input type="number" min={0} max={100} value={s.sellerPerms.maxDiscountPercent} onChange={(e) => saveSettings({ sellerPerms: { ...s.sellerPerms, maxDiscountPercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)) } })} /></Field>
+        </div>
+       
