@@ -64,4 +64,78 @@ function CustomerStatement() {
   if (!cust) return <div className="p-8 text-center text-muted-foreground">جاري التحميل...</div>;
 
   const waHref = cust.phone
-    ? `https://wa.me/${cust.phone
+    ? `https://wa.me/${cust.phone.replace(/[^\d]/g, "")}?text=${encodeURIComponent(
+        renderTemplate(settings.waReminderTemplate, {
+          name: cust.name, balance: formatSDG(cust.balance), store: settings.storeName,
+        })
+      )}`
+    : undefined;
+
+  return (
+    <div className="p-4 lg:p-6 max-w-4xl mx-auto">
+      <div className="no-print">
+        <PageHeader title={cust.name} subtitle={cust.phone ?? undefined}
+          actions={<div className="flex gap-2 flex-wrap items-center">
+            {Number(cust.balance) < 0 && (
+              <span className="text-xs px-2 py-1 rounded-full bg-success/10 text-success font-medium">
+                رصيد فائض: {formatSDG(Math.abs(Number(cust.balance)))}
+              </span>
+            )}
+            <Btn variant="outline" onClick={() => setPayOpen(true)}>
+              <Wallet className="w-4 h-4 inline ml-1" />
+              {Number(cust.balance) > 0 ? `تحصيل (${formatSDG(Number(cust.balance))})` : "تسجيل دفعة"}
+            </Btn>
+            {waHref && (
+              <a href={waHref} target="_blank" rel="noreferrer" className="btn-icon-outline">
+                <MessageCircle className="w-4 h-4 inline ml-1" />واتساب</a>
+            )}
+            <button onClick={() => window.print()} className="btn-icon-outline"><Printer className="w-4 h-4" /></button>
+          </div>} />
+        <Link to="/customers" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
+          <ArrowRight className="w-4 h-4 ml-1" />العودة إلى قائمة العملاء</Link>
+      </div>
+
+      <div className="print-area bg-card border rounded-2xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-bold">كشف حساب العميل</h2>
+            <p className="text-sm text-muted-foreground">{cust.name} · {cust.phone || "—"} · {cust.address || "—"}</p>
+          </div>
+          <Logo className="w-16 h-16" />
+        </div>
+
+        <table className="w-full text-sm border rounded-lg overflow-hidden">
+          <thead className="bg-muted text-muted-foreground">
+            <tr>
+              <th className="text-right p-2">التاريخ</th>
+              <th className="text-right p-2">العملية</th>
+              <th className="text-right p-2">مدين</th>
+              <th className="text-right p-2">دائن</th>
+              <th className="text-right p-2">رصيد</th>
+              <th className="text-right p-2">ملاحظة</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              running += r.debit - r.credit;
+              return (
+                <tr key={r.id} className="border-t">
+                  <td className="p-2">{new Date(r.date).toLocaleDateString("ar-SD")}</td>
+                  <td className="p-2 font-medium">
+                    {r.kind === "sale" ? <Link to="/sales/$id" params={{ id: r.id }} className="text-primary hover:underline">{r.ref}</Link> : r.ref}
+                  </td>
+                  <td className="p-2">{r.debit ? formatSDG(r.debit) : "—"}</td>
+                  <td className="p-2">{r.credit ? formatSDG(r.credit) : "—"}</td>
+                  <td className={`p-2 font-semibold ${running > 0 ? "text-destructive" : ""}`}>{formatSDG(running)}</td>
+                  <td className="p-2 text-muted-foreground">{r.note}</td>
+                </tr>
+              );
+            })}
+            <tr className="border-t bg-muted font-semibold">
+              <td className="p-2" colSpan={2}>المجموع</td>
+              <td className="p-2">{formatSDG(totals.debit)}</td>
+              <td className="p-2">{formatSDG(totals.credit)}</td>
+              <td className={`p-2 ${totals.balance > 0 ? "text-destructive" : ""}`}>{formatSDG(totals.balance)}</td>
+              <td className="p-2"></td>
+            </tr>
+         
