@@ -132,26 +132,4 @@ function NewSale() {
           <div className="flex items-center gap-2 h-11 px-3 rounded-xl border bg-card">
             <Search className="w-4 h-4 text-muted-foreground" />
             <input ref={searchRef} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey}
-              placeholder="ابحث بكود القطعة أو اسمها (F2)..." className="flex-1 bg-transparent outline-none text-sm" />
-            {q && <button onClick={() => setQ("")} className="text-xs text-muted-foreground">✕</button>}
-            <span className="text-xs text-muted-foreground shrink-0">{parts.length} صنف</span>
-          </div>
-          <PosProductGrid parts={parts} q={q} onAdd={addPart} />
-          <PosCart lines={lines} parts={parts} canEditPrice={canEditPrice} onQty={setQty} onPrice={setPrice} onRemove={remove} />
-        </div>
-
-        <PosSidebar
-          customers={customers} customerId={customerId} onCustomerId={setCustomerId} onAddCustomer={custDialog.open}
-          paymentMethod={paymentMethod} onPaymentMethod={setPaymentMethod}
-          bankAccountId={bankAccountId} onBankAccountId={setBankAccountId}
-          txRef={txRef} onTxRef={setTxRef}
-          discount={discount} onDiscount={setDiscount}
-          paid={paid} onPaid={setPaid}
-          notes={notes} onNotes={setNotes}
-          total={total} settings={settings as any} isSeller={isSeller} accounts={settings.accounts} lines={lines}
-          onPayFull={payFull} onHold={hold} onClear={() => { setLines([]); setDiscount(0); setPaid(0); setNotes(""); setCustomerId(""); setTxRef(""); }}
-          onSave={() => save.mutate()} savePending={save.isPending}
-          customerRef={customerRef} methodRef={methodRef} accountRef={accountRef}
-        />
-      </div>
-
+              placeholder="ابحث بكود القطعة أو اسمها
