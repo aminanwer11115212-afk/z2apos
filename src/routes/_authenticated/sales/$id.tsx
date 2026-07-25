@@ -116,79 +116,65 @@ function SaleView() {
       </div>
 
       <div className={`print-area bg-card border rounded-2xl p-6 shadow-sm ${isThermal ? "text-xs" : ""}`}>
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 pb-3 border-b">
-          <div className="flex items-center gap-3">
-            {settings.showLogo && <Logo variant="light" className={isThermal ? "h-10 w-auto" : "h-14 w-auto"} />}
-            <div>
-              <div className={`font-bold ${isThermal ? "text-sm" : "text-lg"}`}>{settings.storeName || "نظام 2A"}</div>
-              {settings.storePhone && <div className="text-xs muted-print text-muted-foreground">📞 {settings.storePhone}</div>}
-              {settings.storeAddress && <div className="text-xs muted-print text-muted-foreground hide-on-thermal">{settings.storeAddress}</div>}
-            </div>
+        {/* Centered header: logo + company name */}
+        <div className="flex flex-col items-center text-center gap-2 pb-3 border-b">
+          {settings.showLogo && <Logo variant="light" className={isThermal ? "h-12 w-auto" : "h-16 w-auto"} />}
+          <div className={`font-bold ${isThermal ? "text-base" : "text-2xl"}`}>{settings.storeName || "نظام 2A"}</div>
+          <div className="text-xs muted-print text-muted-foreground font-semibold tracking-wide">فاتورة مبيعات</div>
+        </div>
+
+        {/* Invoice meta: number + date + customer */}
+        <div className="grid grid-cols-2 gap-3 py-3 text-sm">
+          <div>
+            <div className="muted-print text-muted-foreground text-xs">رقم الفاتورة</div>
+            <div className="font-bold font-mono">{invoiceLabel}</div>
           </div>
           <div className="text-left">
-            <div className="text-xs muted-print text-muted-foreground">رقم الفاتورة</div>
-            <div className={`font-bold font-mono ${isThermal ? "text-lg" : "text-2xl"}`}>{invoiceLabel}</div>
-            <div className="text-xs muted-print text-muted-foreground mt-1">
+            <div className="muted-print text-muted-foreground text-xs">التاريخ</div>
+            <div className="font-semibold">
               {new Date(data.created_at).toLocaleString("ar-SD", { dateStyle: "medium", timeStyle: "short" })}
             </div>
           </div>
-        </div>
-
-        {/* Customer + account */}
-        <div className="grid grid-cols-2 gap-3 py-3 text-sm">
           <div>
             <div className="muted-print text-muted-foreground text-xs">العميل</div>
             <div className="font-semibold">{data.customers?.name ?? "نقدي"}</div>
             {data.customers?.phone && <div className="text-xs muted-print text-muted-foreground">{data.customers.phone}</div>}
           </div>
-          {(data.account_name || parsed.account) && (
-            <div>
-              <div className="muted-print text-muted-foreground text-xs">الحساب</div>
-              <div className="font-semibold">{data.account_name ?? parsed.account}</div>
-            </div>
-          )}
-          {data.payment_method && (
-            <div>
-              <div className="muted-print text-muted-foreground text-xs">طريقة الدفع</div>
-              <div className="font-semibold">{paymentMethodIcon(data.payment_method)} {paymentMethodLabel(data.payment_method)}</div>
-            </div>
-          )}
-          {parsed.ref && (
-            <div>
-              <div className="muted-print text-muted-foreground text-xs">رقم العملية</div>
-              <div className="font-semibold font-mono" dir="ltr">{parsed.ref}</div>
-            </div>
-          )}
-          {parsed.text && (
-            <div className="col-span-2 hide-on-thermal">
-              <div className="muted-print text-muted-foreground text-xs">ملاحظات</div>
-              <div>{parsed.text}</div>
-            </div>
-          )}
+          <div className="text-left">
+            {data.payment_method && (
+              <>
+                <div className="muted-print text-muted-foreground text-xs">طريقة الدفع</div>
+                <div className="font-semibold">
+                  {paymentMethodIcon(data.payment_method)} {paymentMethodLabel(data.payment_method)}
+                  {(data.account_name || parsed.account) && <span className="muted-print text-muted-foreground"> — {data.account_name ?? parsed.account}</span>}
+                </div>
+                {parsed.ref && <div className="text-xs font-mono muted-print text-muted-foreground" dir="ltr">#{parsed.ref}</div>}
+              </>
+            )}
+          </div>
         </div>
 
-
-        {/* Items */}
-        <table className="w-full text-sm">
+        {/* Items — Excel-style table */}
+        <table className="w-full text-sm invoice-table" style={{ borderCollapse: "collapse" }}>
           <thead className="bg-muted">
             <tr>
-              <th className="text-right p-2 font-medium">الصنف</th>
-              <th className="text-center p-2 font-medium w-16">الكمية</th>
-              <th className="text-left p-2 font-medium w-28">السعر</th>
-              <th className="text-left p-2 font-medium w-32">الإجمالي</th>
+              <th className="text-center p-2 font-semibold border w-10">#</th>
+              <th className="text-right p-2 font-semibold border">الصنف</th>
+              <th className="text-center p-2 font-semibold border w-24 hide-on-thermal">الكود</th>
+              <th className="text-center p-2 font-semibold border w-16">الكمية</th>
+              <th className="text-left p-2 font-semibold border w-28">السعر</th>
+              <th className="text-left p-2 font-semibold border w-32">الإجمالي</th>
             </tr>
           </thead>
           <tbody>
-            {data.sale_items.map((it) => (
-              <tr key={it.id} className="border-t">
-                <td className="p-2">
-                  {it.parts?.name}
-                  {it.parts?.code && <span className="text-xs muted-print text-muted-foreground mr-1">({it.parts.code})</span>}
-                </td>
-                <td className="p-2 text-center">{it.qty}</td>
-                <td className="p-2 text-left">{formatSDG(Number(it.unit_price))}</td>
-                <td className="p-2 text-left font-semibold">{formatSDG(Number(it.subtotal))}</td>
+            {data.sale_items.map((it, i) => (
+              <tr key={it.id}>
+                <td className="p-2 text-center border font-mono muted-print text-muted-foreground">{i + 1}</td>
+                <td className="p-2 border">{it.parts?.name}</td>
+                <td className="p-2 border text-center font-mono text-xs hide-on-thermal">{it.parts?.code ?? "—"}</td>
+                <td className="p-2 border text-center">{it.qty}</td>
+                <td className="p-2 border text-left">{formatSDG(Number(it.unit_price))}</td>
+                <td className="p-2 border text-left font-semibold">{formatSDG(Number(it.subtotal))}</td>
               </tr>
             ))}
           </tbody>
@@ -211,9 +197,21 @@ function SaleView() {
           </div>
         </div>
 
-        <div className="mt-6 pt-3 border-t text-center text-xs muted-print text-muted-foreground">
-          {settings.invoiceFooter || "شكراً لتعاملكم معنا"}
-          <div className="mt-1 hide-on-thermal">نظام 2A — من تطوير أمين أنور أحمد</div>
+        {parsed.text && (
+          <div className="mt-4 pt-3 border-t text-xs hide-on-thermal">
+            <span className="muted-print text-muted-foreground">ملاحظات: </span>{parsed.text}
+          </div>
+        )}
+
+        {/* Store details footer — small */}
+        <div className="mt-6 pt-3 border-t text-center text-[10px] leading-relaxed muted-print text-muted-foreground">
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center">
+            {settings.storePhone && <span>📞 {settings.storePhone}</span>}
+            {settings.storeAddress && <span className="hide-on-thermal">📍 {settings.storeAddress}</span>}
+            {settings.storeTaxNo && <span>الرقم الضريبي: {settings.storeTaxNo}</span>}
+          </div>
+          <div className="mt-1 font-medium">{settings.invoiceFooter || "شكراً لتعاملكم معنا"}</div>
+          <div className="mt-0.5 hide-on-thermal opacity-70">نظام 2A — من تطوير أمين أنور أحمد</div>
         </div>
 
       </div>
