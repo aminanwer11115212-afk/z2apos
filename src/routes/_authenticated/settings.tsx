@@ -2,12 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { Field, Input, Btn, PageHeader } from "@/components/ui-kit";
 import { useSettings, saveSettings, type AccountType, type Account, type PrintFormat, type PaymentMethodKey } from "@/lib/settings";
-import { Plus, Trash2, CreditCard, Banknote, Smartphone, Printer, Percent, MessageCircle, Shield, Image as ImageIcon, Store, Wallet } from "lucide-react";
+import { Plus, Trash2, CreditCard, Banknote, Smartphone, Printer, Percent, Shield, Image as ImageIcon, Store, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/settings")({ head: () => ({ meta: [{ title: "الإعدادات — 2A" }] }), component: SettingsPage });
 
-const ACCOUNT_TYPES: { v: AccountType; label: string; icon: React.ReactNode }[] = [
+const ACC_TYPES: { v: AccountType; label: string; icon: React.ReactNode }[] = [
   { v: "cash", label: "نقدي", icon: <Banknote className="w-5 h-5 text-success" /> },
   { v: "bank", label: "بنكي", icon: <CreditCard className="w-5 h-5 text-primary" /> },
   { v: "wallet", label: "محفظة", icon: <Smartphone className="w-5 h-5 text-purple-500" /> },
@@ -30,9 +30,9 @@ function SettingsPage() {
     const next = s.accounts.filter((a) => a.id !== id);
     saveSettings({ accounts: next, defaultAccountId: s.defaultAccountId === id ? next[0].id : s.defaultAccountId });
   };
-  const accountIcon = (type: AccountType) => ACCOUNT_TYPES.find((t) => t.v === type)?.icon ?? <CreditCard className="w-5 h-5" />;
-  const accountLabel = (type: AccountType) => ACCOUNT_TYPES.find((t) => t.v === type)?.label ?? type;
-  const updatePayment = (k: PaymentMethodKey, patch: object) => saveSettings({ paymentMethods: { ...s.paymentMethods, [k]: { ...s.paymentMethods[k], ...patch } } });
+  const accIcon = (type: AccountType) => ACC_TYPES.find((t) => t.v === type)?.icon ?? <CreditCard className="w-5 h-5" />;
+  const accLabel = (type: AccountType) => ACC_TYPES.find((t) => t.v === type)?.label ?? type;
+  const updPayment = (k: PaymentMethodKey, patch: object) => saveSettings({ paymentMethods: { ...s.paymentMethods, [k]: { ...s.paymentMethods[k], ...patch } } });
   const uploadLogo = (file: File) => {
     if (file.size > 500_000) return toast.error("حجم الصورة كبير — الحد ~500KB");
     const reader = new FileReader();
@@ -83,29 +83,14 @@ function SettingsPage() {
       </Section>
 
       <Section title="الحسابات المالية" icon={<Banknote className="w-4 h-4" />}>
-        <div className="space-y-2 mb-3">{s.accounts.map((a) => <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">{accountIcon(a.type)}<div className="flex-1 min-w-0"><div className="font-medium">{a.name}</div><div className="text-xs text-muted-foreground">{accountLabel(a.type)}{a.note ? ` · ${a.note}` : ""}</div></div><label className="flex items-center gap-1 text-xs"><input type="radio" name="def-acc" checked={s.defaultAccountId === a.id} onChange={() => saveSettings({ defaultAccountId: a.id })} />افتراضي</label><button onClick={() => removeAccount(a.id)} className="p-2 text-destructive hover:bg-destructive/10 rounded-lg"><Trash2 className="w-4 h-4" /></button></div>)}</div>
+        <div className="space-y-2 mb-3">{s.accounts.map((a) => <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">{accIcon(a.type)}<div className="flex-1 min-w-0"><div className="font-medium">{a.name}</div><div className="text-xs text-muted-foreground">{accLabel(a.type)}{a.note ? ` · ${a.note}` : ""}</div></div><label className="flex items-center gap-1 text-xs"><input type="radio" name="def-acc" checked={s.defaultAccountId === a.id} onChange={() => saveSettings({ defaultAccountId: a.id })} />افتراضي</label><button onClick={() => removeAccount(a.id)} className="p-2 text-destructive hover:bg-destructive/10 rounded-lg"><Trash2 className="w-4 h-4" /></button></div>)}</div>
         <div className="grid sm:grid-cols-[1fr,140px,1fr,auto] gap-2 items-end p-3 rounded-lg border bg-muted/30">
           <Field label="اسم الحساب"><Input value={newAcc.name} onChange={(e) => setNewAcc({ ...newAcc, name: e.target.value })} placeholder="مثال: بنك الخرطوم" /></Field>
-          <Field label="النوع"><select value={newAcc.type} onChange={(e) => setNewAcc({ ...newAcc, type: e.target.value as AccountType })} className="w-full h-11 px-3 rounded-lg border bg-background">{ACCOUNT_TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}</select></Field>
+          <Field label="النوع"><select value={newAcc.type} onChange={(e) => setNewAcc({ ...newAcc, type: e.target.value as AccountType })} className="w-full h-11 px-3 rounded-lg border bg-background">{ACC_TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}</select></Field>
           <Field label="ملاحظة (رقم الحساب...)"><Input value={newAcc.note} onChange={(e) => setNewAcc({ ...newAcc, note: e.target.value })} /></Field>
           <Btn onClick={addAccount}><Plus className="w-4 h-4 inline ml-1" />إضافة</Btn>
         </div>
       </Section>
 
       <Section title="طرق الدفع" icon={<Wallet className="w-4 h-4" />}>
-        <p className="text-xs text-muted-foreground mb-3">تفعيل/تعطيل الطرق، اختيار الحساب الافتراضي، وإلزام رقم العملية.</p>
-        <div className="space-y-2">{(["cash", "bank", "wallet"] as PaymentMethodKey[]).map((k) => {
-          const cfg = s.paymentMethods[k];
-          const meta = { cash: { icon: "💵", label: "نقدي" }, bank: { icon: "🏦", label: "بنكي" }, wallet: { icon: "📱", label: "محفظة" } }[k];
-          const eligible = s.accounts.filter((a) => k === "cash" ? a.type === "cash" : (a.type === "bank" || a.type === "wallet"));
-          return (
-            <div key={k} className="p-3 rounded-lg border bg-card">
-              <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
-                <div className="font-medium">{meta.icon} {meta.label}</div>
-                <div className="flex items-center gap-3 text-xs">
-                  <label className="flex items-center gap-1"><input type="checkbox" checked={cfg.enabled} onChange={(e) => updatePayment(k, { enabled: e.target.checked })} />مفعّلة</label>
-                  <label className="flex items-center gap-1"><input type="radio" name="def-method" checked={s.defaultMethod === k} onChange={() => saveSettings({ defaultMethod: k })} />افتراضية</label>
-                </div>
-              </div>
-              <div className="grid sm:grid-cols-2 gap-2">
-                <Field label="الحساب الافتراضي"><select value={cfg.defaultAccountId} onChange={(e) => updatePayment(k, { defaultAccountId: e.target.value })} className="w-full h-10 px-2 rounded-lg border bg-background text-sm">{eligible.length === 0 && <option value="">— لا يوجد حساب —</option>}{eligible.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+        <p className="text-xs text-muted-foreground mb-3">تفعيل/تعطيل الطرق
