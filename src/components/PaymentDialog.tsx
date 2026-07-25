@@ -9,7 +9,7 @@ import { toast } from "sonner";
 type Props = {
   open: boolean;
   onClose: () => void;
-  direction: "in" | "out"; // in = تحصيل من عميل, out = سداد لمورد
+  direction: "in" | "out";
   party: { id: string; name: string; balance: number };
   saleId?: string;
   purchaseId?: string;
@@ -19,6 +19,7 @@ type Props = {
 const METHOD_META: Record<PaymentMethodKey, { label: string; icon: string }> = {
   cash: { label: "نقدي", icon: "💵" },
   bank: { label: "بنكي", icon: "🏦" },
+  wallet: { label: "محفظة", icon: "📱" },
 };
 
 export function PaymentDialog({ open, onClose, direction, party, saleId, purchaseId, suggested }: Props) {
@@ -44,10 +45,8 @@ export function PaymentDialog({ open, onClose, direction, party, saleId, purchas
       setTxRef("");
       setNotes("");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, suggested, party.balance]);
+  }, [open, suggested, party.balance, initialMethod, settings.paymentMethods]);
 
-  // When method changes, snap to its default account.
   useEffect(() => {
     if (!open) return;
     setAccountId(settings.paymentMethods[method].defaultAccountId);
@@ -55,10 +54,9 @@ export function PaymentDialog({ open, onClose, direction, party, saleId, purchas
 
   const cfg = settings.paymentMethods[method];
   const acc = settings.accounts.find((a) => a.id === accountId);
-  const requireRef = method === "bank" && cfg.requireRef;
+  const isDigital = method === "bank" || method === "wallet";
+  const requireRef = isDigital && cfg.requireRef;
 
-  // Both directions decrement the party's ledger balance by `amount`
-  // (customer's debt shrinks or turns into surplus; supplier's debt shrinks likewise).
   const projectedBalance = Number(party.balance) - amount;
 
   const save = useMutation({
@@ -67,21 +65,13 @@ export function PaymentDialog({ open, onClose, direction, party, saleId, purchas
       if (requireRef && !txRef.trim()) throw new Error("رقم العملية مطلوب لهذه الطريقة");
       const { data: userRes } = await supabase.auth.getUser();
       const uid = userRes.user?.id;
-      const finalNotes = [
-        txRef.trim() ? `مرجع: ${txRef.trim()}` : "",
-        notes.trim(),
-      ].filter(Boolean).join(" · ") || null;
+      const finalNotes = [txRef.trim() ? `مرجع: ${txRef.trim()}` : "", notes.trim()].filter(Boolean).join(" · ") || null;
       const payload = {
-        direction,
-        amount,
-        method,
-        account_name: acc?.name ?? null,
-        notes: finalNotes,
-        created_by: uid ?? null,
+        direction, amount, method, account_name: acc?.name ?? null,
+        notes: finalNotes, created_by: uid ?? null,
         customer_id: direction === "in" ? party.id : null,
         supplier_id: direction === "out" ? party.id : null,
-        sale_id: saleId ?? null,
-        purchase_id: purchaseId ?? null,
+        sale_id: saleId ?? null, purchase_id: purchaseId ?? null,
       };
       const { error } = await supabase.from("payments").insert(payload);
       if (error) throw error;
@@ -111,8 +101,7 @@ export function PaymentDialog({ open, onClose, direction, party, saleId, purchas
         </div>
 
         <Field label="المبلغ *">
-          <Input type="number" step="0.01" value={amount}
-            onChange={(e) => setAmount(Number(e.target.value) || 0)} autoFocus />
+          <Input type="number" step="0.01" value={amount} onChange={(e) => setAmount(Number(e.target.value) || 0)} autoFocus />
         </Field>
 
         {amount > 0 && (
@@ -136,20 +125,18 @@ export function PaymentDialog({ open, onClose, direction, party, saleId, purchas
         </Field>
 
         <Field label="الحساب">
-          <select value={accountId} onChange={(e) => setAccountId(e.target.value)}
-            className="w-full h-11 px-3 rounded-lg border bg-background">
+          <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className="w-full h-11 px-3 rounded-lg border bg-background">
             {settings.accounts
-              .filter((a) => method === "cash" ? a.type === "cash" : a.type === "bank")
+              .filter((a) => method === "cash" ? a.type === "cash" : (a.type === "bank" || a.type === "wallet"))
               .map((a) => (
-                <option key={a.id} value={a.id}>{a.type === "cash" ? "💵" : "🏦"} {a.name}</option>
+                <option key={a.id} value={a.id}>{a.type === "cash" ? "💵" : a.type === "wallet" ? "📱" : "🏦"} {a.name}</option>
               ))}
           </select>
         </Field>
 
-        {method === "bank" && (
+        {isDigital && (
           <Field label={`رقم العملية${requireRef ? " *" : ""}`}>
-            <Input value={txRef} onChange={(e) => setTxRef(e.target.value)}
-              placeholder={requireRef ? "مطلوب" : "اختياري"} dir="ltr" className="font-mono text-right" />
+            <Input value={txRef} onChange={(e) => setTxRef(e.target.value)} placeholder={requireRef ? "مطلوب" : "اختياري"} dir="ltr" className="font-mono text-right" />
           </Field>
         )}
 
