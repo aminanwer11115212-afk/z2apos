@@ -63,6 +63,14 @@ function CustomerStatement() {
 
   if (!cust) return <div className="p-8 text-center text-muted-foreground">جاري التحميل...</div>;
 
+  const waHref = cust.phone
+    ? `https://wa.me/${cust.phone.replace(/[^\d]/g, "")}?text=${encodeURIComponent(
+        renderTemplate(settings.waReminderTemplate, {
+          name: cust.name, balance: formatSDG(cust.balance), store: settings.storeName,
+        })
+      )}`
+    : undefined;
+
   return (
     <div className="p-4 lg:p-6 max-w-4xl mx-auto">
       <div className="no-print">
@@ -77,17 +85,11 @@ function CustomerStatement() {
               <Wallet className="w-4 h-4 inline ml-1" />
               {Number(cust.balance) > 0 ? `تحصيل (${formatSDG(cust.balance)})` : "إيداع مقدم"}
             </Btn>
-            {cust.phone && (() => {
-              const msg = renderTemplate(settings.waReminderTemplate, {
-                name: cust.name, balance: formatSDG(cust.balance), store: settings.storeName,
-              });
-              const href = `https://wa.me/${cust.phone.replace(/[^\d]/g, "")}?text=${encodeURIComponent(msg)}`;
-              return (
-                <a href={href} target="_blank" rel="noreferrer">
-                  <Btn variant="outline"><MessageCircle className="w-4 h-4 inline ml-1" />تذكير واتساب</Btn>
-                </a>
-              );
-            })()}
+            {waHref && (
+              <a href={waHref} target="_blank" rel="noreferrer">
+                <Btn variant="outline"><MessageCircle className="w-4 h-4 inline ml-1" />تذكير واتساب</Btn>
+              </a>
+            )}
             <Btn onClick={() => window.print()}><Printer className="w-4 h-4 inline ml-1" />طباعة</Btn>
           </div>} />
         <Link to="/customers" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-3">
@@ -95,70 +97,4 @@ function CustomerStatement() {
         </Link>
       </div>
 
-      <div className="print-area bg-card border rounded-2xl p-5 shadow-sm">
-        <div className="flex items-start justify-between gap-4 pb-3 border-b">
-          <div className="flex items-center gap-3">
-            {settings.showLogo && <Logo variant="light" className="h-12 w-auto" />}
-            <div>
-              <div className="font-bold text-lg">{settings.storeName || "نظام 2A"}</div>
-              <div className="text-xs muted-print text-muted-foreground">كشف حساب عميل</div>
-            </div>
-          </div>
-          <div className="text-left text-xs muted-print text-muted-foreground">
-            <div>العميل: <span className="font-bold text-foreground">{cust.name}</span></div>
-            {cust.phone && <div>هاتف: {cust.phone}</div>}
-            <div>طُبع: {new Date().toLocaleString("ar-SD", { dateStyle: "short", timeStyle: "short" })}</div>
-          </div>
-        </div>
-
-        <table className="w-full text-sm mt-3">
-          <thead className="text-xs muted-print text-muted-foreground border-b">
-            <tr>
-              <th className="text-right py-2">التاريخ</th>
-              <th className="text-right py-2">البيان</th>
-              <th className="text-center py-2 w-24">مدين</th>
-              <th className="text-center py-2 w-24">دائن</th>
-              <th className="text-left py-2 w-28">الرصيد</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {rows.length === 0 ? (
-              <tr><td colSpan={5} className="py-6 text-center text-muted-foreground">لا توجد حركات</td></tr>
-            ) : rows.map((r) => {
-              running += r.debit - r.credit;
-              return (
-                <tr key={`${r.kind}-${r.id}`}>
-                  <td className="py-2 text-xs muted-print text-muted-foreground">{new Date(r.date).toLocaleDateString("ar-SD")}</td>
-                  <td className="py-2">
-                    <div className="font-medium">{r.ref}</div>
-                    {r.note && <div className="text-xs muted-print text-muted-foreground">{r.note}</div>}
-                  </td>
-                  <td className="py-2 text-center">{r.debit ? formatSDG(r.debit) : "—"}</td>
-                  <td className="py-2 text-center">{r.credit ? formatSDG(r.credit) : "—"}</td>
-                  <td className={`py-2 text-left font-semibold ${running > 0 ? "text-destructive" : "text-success"}`}>{formatSDG(running)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-          <tfoot className="border-t font-bold">
-            <tr>
-              <td colSpan={2} className="py-2">الإجمالي</td>
-              <td className="py-2 text-center">{formatSDG(totals.debit)}</td>
-              <td className="py-2 text-center">{formatSDG(totals.credit)}</td>
-              <td className={`py-2 text-left ${totals.balance > 0 ? "text-destructive" : "text-success"}`}>{formatSDG(totals.balance)}</td>
-            </tr>
-          </tfoot>
-        </table>
-
-        <div className="mt-6 pt-3 border-t text-center text-xs muted-print text-muted-foreground">
-          {settings.invoiceFooter || "شكراً لتعاملكم معنا"}
-        </div>
-      </div>
-
-      <PaymentDialog open={payOpen} onClose={() => setPayOpen(false)}
-        direction="in"
-        party={{ id: cust.id, name: cust.name, balance: Number(cust.balance) }}
-        suggested={Number(cust.balance)} />
-    </div>
-  );
-}
+      <div className="print-area bg-card border rounded-2
