@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
 import { useSettings, computeTax } from "@/lib/settings";
+import { PaymentMethod } from "@/lib/payments";
 import { Btn, PageHeader, Field, Input } from "@/components/ui-kit";
 import { ArrowRight, Wallet } from "lucide-react";
 import { toast } from "sonner";
@@ -22,6 +23,16 @@ type SaleFull = {
 
 type Account = { id: string; name: string; type: "cash" | "bank" | "wallet" };
 
+const methodMeta: Record<PaymentMethod, { icon: string; label: string }> = {
+  cash: { icon: "💵", label: "نقدي" },
+  bank: { icon: "🏦", label: "بنكي" },
+  wallet: { icon: "📱", label: "محفظة" },
+  transfer: { icon: "🔁", label: "تحويل" },
+  credit: { icon: "📝", label: "آجل" },
+};
+
+const availableMethods: PaymentMethod[] = ["cash", "bank", "wallet"];
+
 function InvoicePaymentPage() {
   const { id } = Route.useParams();
   const nav = useNavigate();
@@ -29,8 +40,8 @@ function InvoicePaymentPage() {
   const settings = useSettings();
 
   const [amount, setAmount] = useState(0);
-  const [method, setMethod] = useState<"cash" | "bank">(settings.defaultMethod);
-  const [accountId, setAccountId] = useState(settings.paymentMethods[settings.defaultMethod].defaultAccountId);
+  const [method, setMethod] = useState<PaymentMethod>(settings.defaultMethod);
+  const [accountId, setAccountId] = useState(settings.paymentMethods[method]?.defaultAccountId || "");
   const [txRef, setTxRef] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -55,7 +66,8 @@ function InvoicePaymentPage() {
   const grand = tax.grand;
   const due = sale ? Math.max(0, grand - Number(sale.paid)) : 0;
 
-  const eligibleAccounts = useMemo(() => accounts.filter((a) => method === "cash" ? a.type === "cash" : a.type === "bank"), [accounts, method]);
+  const isDigital = method === "bank" || method === "wallet";
+  const eligibleAccounts = useMemo(() => accounts.filter((a) => method === "cash" ? a.type === "cash" : (a.type === "bank" || a.type === "wallet")), [accounts, method]);
   const acc = accounts.find((a) => a.id === accountId);
 
   const save = useMutation({
@@ -64,7 +76,7 @@ function InvoicePaymentPage() {
       if (!(amount > 0)) throw new Error("أدخل مبلغاً صحيحاً");
       if (amount > due) throw new Error(`المبلغ يتجاوز المتبقي: ${formatSDG(due)}`);
       const cfg = settings.paymentMethods[method];
-      if (cfg?.requireRef && method === "bank" && !txRef.trim()) throw new Error("رقم العملية مطلوب");
+      if (cfg?.requireRef && isDigital && !txRef.trim()) throw new Error("رقم العملية مطلوب");
       const { data: userRes } = await supabase.auth.getUser(); const uid = userRes.user?.id;
       const finalNotes = [txRef.trim() ? `مرجع: ${txRef.trim()}` : "", notes.trim()].filter(Boolean).join(" · ") || null;
       const { error } = await supabase.from("payments").insert({
@@ -104,11 +116,11 @@ function InvoicePaymentPage() {
         <button onClick={() => setAmount(due)} className="text-xs text-primary hover:underline">تعيين المبلغ المتبقي</button>
 
         <Field label="طريقة الدفع">
-          <div className="grid grid-cols-2 gap-2">
-            {(["cash", "bank"] as const).map((m) => (
-              <button key={m} onClick={() => { setMethod(m); setAccountId(settings.paymentMethods[m].defaultAccountId); }}
+          <div className="grid grid-cols-3 gap-2">
+            {availableMethods.map((m) => (
+              <button key={m} onClick={() => { setMethod(m); setAccountId(settings.paymentMethods[m]?.defaultAccountId || eligibleAccounts.find((a) => a.type === (m === "cash" ? "cash" : "bank" || "wallet"))?.id || ""); }}
                 className={`h-10 rounded-lg border text-sm font-medium ${method === m ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
-                {m === "cash" ? "💵 نقدي" : "🏦 بنكي"}
+                {methodMeta[m].icon} {methodMeta[m].label}
               </button>
             ))}
           </div>
@@ -120,7 +132,7 @@ function InvoicePaymentPage() {
           </select>
         </Field>
 
-        {method === "bank" && (
+        {isDigital && (
           <Field label="رقم العملية">
             <Input value={txRef} onChange={(e) => setTxRef(e.target.value)} dir="ltr" className="text-right font-mono" />
           </Field>
