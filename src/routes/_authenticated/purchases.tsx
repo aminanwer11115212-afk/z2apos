@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
+import { useSettings } from "@/lib/settings";
+import { PaymentMethod, paymentMethodIcon } from "@/lib/payments";
 import { Field, Input, Btn, PageHeader, EmptyState } from "@/components/ui-kit";
 import { Plus, Minus, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -74,11 +76,17 @@ function PurchasesPage() {
   );
 }
 
+const METHOD_ORDER: PaymentMethod[] = ["cash", "bank", "wallet"];
+
 function NewPurchase({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
+  const settings = useSettings();
   const [q, setQ] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [supplierId, setSupplierId] = useState("");
   const [paid, setPaid] = useState(0);
+  const [method, setMethod] = useState<PaymentMethod>(settings.defaultMethod);
+  const [accountId, setAccountId] = useState(settings.paymentMethods[method].defaultAccountId);
+  const [txRef, setTxRef] = useState("");
   const [notes, setNotes] = useState("");
 
   const { data: parts = [] } = useQuery({
@@ -109,12 +117,18 @@ function NewPurchase({ onDone, onCancel }: { onDone: () => void; onCancel: () =>
   };
   const total = lines.reduce((s, l) => s + l.qty * l.unit_cost, 0);
 
+  const isDigital = method === "bank" || method === "wallet";
+  const account = settings.accounts.find((a) => a.id === accountId);
+  const availableAccounts = isDigital ? settings.accounts.filter((a) => a.type === "bank" || a.type === "wallet") : settings.accounts.filter((a) => a.type === "cash");
+
   const save = useMutation({
     mutationFn: async () => {
       if (lines.length === 0) throw new Error("لا توجد أصناف");
       const { data: userRes } = await supabase.auth.getUser();
+      const finalNotes = [txRef.trim() ? `مرجع: ${txRef.trim()}` : "", notes.trim()].filter(Boolean).join(" · ") || null;
       const { data: pur, error: e1 } = await supabase.from("purchases").insert({
-        supplier_id: supplierId || null, paid, notes: notes || null, created_by: userRes.user?.id ?? null,
+        supplier_id: supplierId || null, paid, notes: finalNotes, created_by: userRes.user?.id ?? null,
+        payment_method: method, account_name: account?.name ?? null,
       }).select("id,invoice_no").single();
       if (e1) throw e1;
       const items = lines.map((l) => ({ purchase_id: pur.id, part_id: l.part.id, qty: l.qty, unit_cost: l.unit_cost }));
@@ -192,19 +206,25 @@ function NewPurchase({ onDone, onCancel }: { onDone: () => void; onCancel: () =>
             </select>
           </Field>
           <Field label="المدفوع"><Input type="number" step="0.01" value={paid} onChange={(e) => setPaid(Number(e.target.value) || 0)} /></Field>
-          <Field label="ملاحظات"><Input value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
 
-          <div className="border-t pt-3 space-y-1 text-sm">
-            <div className="flex justify-between text-muted-foreground"><span>الإجمالي</span><span>{formatSDG(total)}</span></div>
-            <div className="flex justify-between text-muted-foreground"><span>المدفوع</span><span>- {formatSDG(paid)}</span></div>
-            <div className="flex justify-between font-bold text-base pt-2 border-t">
-              <span>المستحق</span><span className={total - paid > 0 ? "text-destructive" : "text-success"}>{formatSDG(Math.max(0, total - paid))}</span>
+          <Field label="طريقة الدفع">
+            <div className="grid grid-cols-3 gap-2">
+              {METHOD_ORDER.map((m) => (
+                <button key={m} type="button" onClick={() => { setMethod(m); setAccountId(settings.paymentMethods[m].defaultAccountId); }}
+                  className={`h-10 rounded-lg border text-sm font-medium ${method === m ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
+                  {paymentMethodIcon(m)} {m === "cash" ? "نقدي" : m === "bank" ? "بنكي" : "محفظة"}
+                </button>
+              ))}
             </div>
-          </div>
+          </Field>
 
-          <Btn onClick={() => save.mutate()} disabled={save.isPending || lines.length === 0} className="w-full">حفظ الفاتورة</Btn>
-        </aside>
-      </div>
-    </div>
-  );
-}
+          <Field label={isDigital ? "الحساب" : "صندوق النقد"}>
+            <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className="w-full h-11 px-3 rounded-lg border bg-background">
+              {availableAccounts.map((a) => (
+                <option key={a.id} value={a.id}>{a.type === "cash" ? "💵" : a.type === "wallet" ? "📱" : "🏦"} {a.name}</option>
+              ))}
+            </select>
+          </Field>
+
+          {isDigital && (
+            
