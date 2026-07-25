@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
+import { whatsappUrl } from "@/lib/utils";
 import { Modal, Field, Input, Btn, PageHeader, SearchBar, EmptyState, useDialog } from "@/components/ui-kit";
 import { PaymentDialog } from "@/components/PaymentDialog";
 import { Plus, Pencil, Trash2, Wallet, MessageCircle } from "lucide-react";
@@ -89,7 +90,7 @@ function CustomersPage() {
                         className="p-2 hover:bg-success/10 text-success rounded-lg"><Wallet className="w-4 h-4" /></button>
                     )}
                     {c.phone && (
-                      <a href={`https://wa.me/${c.phone.replace(/[^\d]/g, "")}`} target="_blank" rel="noreferrer"
+                      <a href={whatsappUrl(c.phone)} target="_blank" rel="noreferrer"
                         title="واتساب" className="inline-block p-2 hover:bg-muted rounded-lg"><MessageCircle className="w-4 h-4" /></a>
                     )}
                     <button onClick={() => openEdit(c)} className="p-2 hover:bg-muted rounded-lg"><Pencil className="w-4 h-4" /></button>
