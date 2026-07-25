@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useMyRole } from "@/lib/auth";
 import { useSettings, encodeNotes, computeTax } from "@/lib/settings";
-import { type PaymentMethod } from "@/lib/payments";
+import { type PaymentMethod, PAYMENT_METHODS } from "@/lib/payments";
 import { PosPart, PosLine, HeldSale, loadHeld, saveHeld } from "@/lib/pos";
 import { usePosCustomerDialog } from "@/components/PosCustomerDialog";
 import { toast } from "sonner";
@@ -19,16 +19,16 @@ export function usePos() {
   const canEditPrice = !isSeller || perms.editPrice;
   const maxDiscPct = isSeller ? perms.maxDiscountPercent : 100;
 
-  const bankAccounts = useMemo(() => settings.accounts.filter((a) => a.type === "bank"), [settings.accounts]);
+  const bankAccounts = useMemo(() => settings.accounts.filter((a) => a.type === "bank" || a.type === "wallet"), [settings.accounts]);
   const cashAccount = useMemo(() => settings.accounts.find((a) => a.type === "cash") ?? settings.accounts[0], [settings.accounts]);
-  const enabledMethods = useMemo(() => (Object.keys(settings.paymentMethods) as ("cash" | "bank")[]).filter((k) => settings.paymentMethods[k].enabled), [settings.paymentMethods]);
+  const enabledMethods = useMemo(() => (Object.keys(settings.paymentMethods) as PaymentMethod[]).filter((k) => settings.paymentMethods[k]?.enabled), [settings.paymentMethods]);
   const initialMethod: PaymentMethod = enabledMethods.includes(settings.defaultMethod) ? settings.defaultMethod : (enabledMethods[0] ?? "cash");
 
   const [q, setQ] = useState("");
   const [lines, setLines] = useState<PosLine[]>([]);
   const [customerId, setCustomerId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(initialMethod);
-  const [bankAccountId, setBankAccountId] = useState(settings.paymentMethods.bank.defaultAccountId || bankAccounts[0]?.id || "");
+  const [bankAccountId, setBankAccountId] = useState(settings.paymentMethods[paymentMethod]?.defaultAccountId || bankAccounts[0]?.id || "");
   const [txRef, setTxRef] = useState("");
   const [discount, setDiscount] = useState(0);
   const [paid, setPaid] = useState(0);
@@ -73,14 +73,15 @@ export function usePos() {
   const dropHeld = (id: string) => { const nx = held.filter((x) => x.id !== id); setHeld(nx); saveHeld(nx); };
   const clear = () => { setLines([]); setDiscount(0); setPaid(0); setNotes(""); setCustomerId(""); setTxRef(""); };
 
+  const isDigital = paymentMethod === "bank" || paymentMethod === "wallet";
   const save = useMutation({
     mutationFn: async () => {
       if (lines.length === 0) throw new Error("لا توجد أصناف");
       for (const l of lines) { const avail = Number(l.part.quantity); if (l.qty > avail) throw new Error(`الكمية المطلوبة من ${l.part.name} (${l.qty}) تتجاوز المتاح (${avail})`); }
-      const methodCfg = settings.paymentMethods[paymentMethod as "cash" | "bank"]; if (methodCfg?.requireRef && !txRef.trim()) throw new Error("رقم العملية مطلوب");
+      const methodCfg = settings.paymentMethods[paymentMethod as "cash" | "bank" | "wallet"]; if (methodCfg?.requireRef && isDigital && !txRef.trim()) throw new Error("رقم العملية مطلوب");
       const { data: userRes } = await supabase.auth.getUser(); const uid = userRes.user?.id; if (!uid) throw new Error("يجب تسجيل الدخول");
-      const acc = paymentMethod === "bank" ? bankAccounts.find((a) => a.id === bankAccountId) : cashAccount;
-      const ref = paymentMethod === "bank" ? txRef.trim() : "";
+      const acc = isDigital ? bankAccounts.find((a) => a.id === bankAccountId) : cashAccount;
+      const ref = isDigital ? txRef.trim() : "";
       const finalNotes = acc ? encodeNotes(acc.name, notes, ref) : notes;
       const { data: sale, error: e1 } = await supabase.from("sales").insert({ customer_id: customerId || null, discount: effectiveDiscount, paid, notes: finalNotes || null, created_by: uid, payment_method: paymentMethod, account_name: acc?.name ?? null }).select("id, invoice_no").single(); if (e1) throw e1;
       const items = lines.map((l) => ({ sale_id: sale.id, part_id: l.part.id, qty: l.qty, unit_price: l.unit_price })); const { error: e2 } = await supabase.from("sale_items").insert(items); if (e2) throw e2;
@@ -96,7 +97,7 @@ export function usePos() {
       const tag = (e.target as HTMLElement).tagName; const inField = tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA";
       if (e.key === "F2" || (e.key === "/" && !inField)) { e.preventDefault(); searchRef.current?.focus(); searchRef.current?.select(); }
       else if (e.key === "F4") { e.preventDefault(); customerRef.current?.focus(); }
-      else if (e.key === "F6") { e.preventDefault(); if (paymentMethod !== "bank") setPaymentMethod("bank"); setTimeout(() => accountRef.current?.focus(), 0); }
+      else if (e.key === "F6") { e.preventDefault(); if (!isDigital) setPaymentMethod("bank"); setTimeout(() => accountRef.current?.focus(), 0); }
       else if (e.key === "F7") { e.preventDefault(); methodRef.current?.focus(); }
       else if (e.key === "F9") { e.preventDefault(); if (lines.length && !save.isPending) save.mutate(); }
       else if (e.key === "F8") { e.preventDefault(); hold(); }
@@ -104,7 +105,7 @@ export function usePos() {
       else if (!inField && (e.key === "-" || e.key === "_")) { const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part.id, Math.max(0.01, last.qty - 1)); } }
     };
     window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
-  }, [lines, save, paymentMethod]);
+  }, [lines, save, paymentMethod, isDigital]);
 
   const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === "Escape") setQ(""); };
 
