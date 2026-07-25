@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Modal, Field, Input, Btn } from "@/components/ui-kit";
 import { useSettings, parseNotes, encodeNotes } from "@/lib/settings";
+import { PaymentMethod } from "@/lib/payments";
 import { toast } from "sonner";
 
 type Kind = "sale" | "purchase";
@@ -14,7 +15,7 @@ type Props = {
   invoice: {
     id: string;
     total: number;
-    discount?: number; // sales only
+    discount?: number;
     paid: number;
     payment_method: string | null;
     account_name: string | null;
@@ -22,12 +23,14 @@ type Props = {
   };
 };
 
-/**
- * Partial invoice editor: adjust discount / paid / payment method / account
- * / transaction reference / notes for an existing invoice. Item lines and
- * quantities remain immutable so stock stays consistent. DB triggers
- * automatically re-derive customer/supplier balances on UPDATE.
- */
+const METHOD_META: Record<PaymentMethod, { icon: string; label: string }> = {
+  cash: { icon: "💵", label: "نقدي" },
+  bank: { icon: "🏦", label: "بنكي" },
+  wallet: { icon: "📱", label: "محفظة" },
+  transfer: { icon: "🔁", label: "تحويل" },
+  credit: { icon: "📝", label: "آجل" },
+};
+
 export function EditInvoiceDialog({ open, onClose, kind, invoice }: Props) {
   const qc = useQueryClient();
   const settings = useSettings();
@@ -35,7 +38,7 @@ export function EditInvoiceDialog({ open, onClose, kind, invoice }: Props) {
 
   const [discount, setDiscount] = useState(Number(invoice.discount ?? 0));
   const [paid, setPaid] = useState(Number(invoice.paid));
-  const [method, setMethod] = useState<string>(invoice.payment_method ?? "cash");
+  const [method, setMethod] = useState<PaymentMethod>((invoice.payment_method as PaymentMethod) ?? "cash");
   const [accountName, setAccountName] = useState<string>(invoice.account_name ?? parsed.account ?? "");
   const [txRef, setTxRef] = useState<string>(parsed.ref ?? "");
   const [noteText, setNoteText] = useState<string>(parsed.text);
@@ -44,15 +47,15 @@ export function EditInvoiceDialog({ open, onClose, kind, invoice }: Props) {
     if (!open) return;
     setDiscount(Number(invoice.discount ?? 0));
     setPaid(Number(invoice.paid));
-    setMethod(invoice.payment_method ?? "cash");
+    setMethod((invoice.payment_method as PaymentMethod) ?? "cash");
     setAccountName(invoice.account_name ?? parsed.account ?? "");
     setTxRef(parsed.ref ?? "");
     setNoteText(parsed.text);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, invoice.id]);
+  }, [open, invoice.id, invoice.discount, invoice.paid, invoice.payment_method, invoice.account_name, parsed.account, parsed.ref, parsed.text]);
 
-  const bankAccounts = settings.accounts.filter((a) => a.type === "bank");
+  const digitalAccounts = settings.accounts.filter((a) => a.type === "bank" || a.type === "wallet");
   const cashAccount = settings.accounts.find((a) => a.type === "cash") ?? settings.accounts[0];
+  const isDigital = method === "bank" || method === "wallet";
 
   const total = Number(invoice.total);
   const net = kind === "sale" ? total - discount : total;
@@ -62,36 +65,19 @@ export function EditInvoiceDialog({ open, onClose, kind, invoice }: Props) {
     mutationFn: async () => {
       if (discount < 0 || paid < 0) throw new Error("قيمة غير صالحة");
       if (kind === "sale" && discount > total) throw new Error("الخصم أكبر من الإجمالي");
-
-      // Resolve account depending on method: bank uses selected account name,
-      // cash falls back to primary cash account.
-      const acc = method === "bank"
-        ? (accountName ? { name: accountName } : bankAccounts[0])
-        : cashAccount;
-      const ref = method === "bank" ? txRef.trim() : "";
+      const acc = isDigital ? (accountName ? { name: accountName } : digitalAccounts[0]) : cashAccount;
+      const ref = isDigital ? txRef.trim() : "";
       const finalNotes = acc ? encodeNotes(acc.name, noteText, ref) : (noteText || null);
-
-      const basePatch = {
-        paid,
-        payment_method: method,
-        account_name: acc?.name ?? null,
-        notes: finalNotes || null,
-      };
+      const basePatch = { paid, payment_method: method, account_name: acc?.name ?? null, notes: finalNotes || null };
       if (kind === "sale") {
-        const { error } = await supabase.from("sales")
-          .update({ ...basePatch, discount }).eq("id", invoice.id);
+        const { error } = await supabase.from("sales").update({ ...basePatch, discount }).eq("id", invoice.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("purchases")
-          .update(basePatch).eq("id", invoice.id);
+        const { error } = await supabase.from("purchases").update(basePatch).eq("id", invoice.id);
         if (error) throw error;
       }
     },
-    onSuccess: () => {
-      toast.success("تم تحديث الفاتورة");
-      qc.invalidateQueries();
-      onClose();
-    },
+    onSuccess: () => { toast.success("تم تحديث الفاتورة"); qc.invalidateQueries(); onClose(); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -102,9 +88,7 @@ export function EditInvoiceDialog({ open, onClose, kind, invoice }: Props) {
         <Btn onClick={() => save.mutate()} disabled={save.isPending}>حفظ التعديلات</Btn>
       </>}>
       <div className="space-y-3">
-        <p className="text-xs text-muted-foreground">
-          يمكن تعديل الخصم والدفع وطريقة الدفع والملاحظات فقط. الأصناف والكميات لا تُعدَّل حفاظاً على المخزون.
-        </p>
+        <p className="text-xs text-muted-foreground">يمكن تعديل الخصم والدفع وطريقة الدفع والملاحظات فقط. الأصناف والكميات لا تُعدَّل حفاظاً على المخزون.</p>
 
         {kind === "sale" && (
           <Field label="الخصم">
@@ -122,21 +106,21 @@ export function EditInvoiceDialog({ open, onClose, kind, invoice }: Props) {
         </Field>
 
         <Field label="طريقة الدفع">
-          <div className="grid grid-cols-2 gap-2">
-            {(["cash", "bank"] as const).map((m) => (
+          <div className="grid grid-cols-3 gap-2">
+            {(["cash", "bank", "wallet"] as PaymentMethod[]).map((m) => (
               <button key={m} type="button" onClick={() => setMethod(m)}
                 className={`h-10 rounded-lg border text-sm font-medium ${method === m ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
-                {m === "cash" ? "💵 نقدي" : "🏦 بنكي"}
+                {METHOD_META[m].icon} {METHOD_META[m].label}
               </button>
             ))}
           </div>
         </Field>
 
-        {method === "bank" && (
+        {isDigital && (
           <>
-            <Field label="الحساب البنكي">
+            <Field label={method === "bank" ? "الحساب البنكي" : "الحساب الإلكتروني"}>
               <div className="grid grid-cols-3 gap-2">
-                {bankAccounts.map((a) => (
+                {digitalAccounts.map((a) => (
                   <button key={a.id} type="button" onClick={() => setAccountName(a.name)}
                     className={`h-9 rounded-lg border text-xs font-medium ${accountName === a.name ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
                     {a.name}
