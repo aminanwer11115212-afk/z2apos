@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from "react";
 import { PosPart } from "@/lib/pos";
 import { formatSDG } from "@/lib/auth";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -15,6 +16,7 @@ export function PosProductGrid({
   onAdd: (p: PosPart) => void;
 }) {
   const [page, setPage] = useState(1);
+  const prevQ = useRef(q);
 
   const filtered = useMemo(() => {
     if (!q.trim()) return parts;
@@ -29,8 +31,6 @@ export function PosProductGrid({
     [filtered, pageSafe]
   );
 
-  // Reset page when query changes
-  const prevQ = useRef(q);
   useEffect(() => {
     if (prevQ.current !== q) { setPage(1); prevQ.current = q; }
   }, [q]);
@@ -76,5 +76,3 @@ export function PosProductGrid({
     </div>
   );
 }
-
-import { useState, useEffect, useRef } from "react";
