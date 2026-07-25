@@ -108,28 +108,4 @@ function NewSale() {
       else if (e.key === "F9") { e.preventDefault(); if (lines.length && !save.isPending) save.mutate(); }
       else if (e.key === "F8") { e.preventDefault(); hold(); }
       else if (!inField && (e.key === "+" || e.key === "=")) { const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part.id, last.qty + 1); } }
-      else if (!inField && (e.key === "-" || e.key === "_")) { const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part.id, Math.max(0.01, last.qty - 1)); } }
-    };
-    window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
-  }, [lines, save, paymentMethod]);
-
-  const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === "Escape") setQ(""); };
-
-  return (
-    <div className="p-3 lg:p-4 max-w-6xl mx-auto">
-      <PageHeader title="بيع سريع" actions={
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setHoldOpen(true)} className="relative h-8 px-2.5 rounded-lg border text-xs font-medium hover:bg-muted flex items-center gap-1">
-            <Play className="w-3.5 h-3.5" />المعلّقة
-            {held.length > 0 && <span className="min-w-5 h-5 px-1 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold">{held.length}</span>}
-          </button>
-          <div className="hidden md:flex items-center gap-1 text-xs text-muted-foreground"><Keyboard className="w-3.5 h-3.5" /><span>F2 بحث · F6 حساب · F7 دفع · F8 تعليق · F9 حفظ</span></div>
-        </div>
-      } />
-
-      <div className="grid lg:grid-cols-[1fr,320px] gap-3">
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 h-11 px-3 rounded-xl border bg-card">
-            <Search className="w-4 h-4 text-muted-foreground" />
-            <input ref={searchRef} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey}
-              placeholder="ابحث بكود القطعة أو اسمها
+      else if (!inField && (e.key === "-" || e.key === "_")) { const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part
