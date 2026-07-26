@@ -45,10 +45,7 @@ function InvoicePaymentPage() {
       return data as any;
     },
   });
-  const { data: accounts = [] } = useQuery({
-    queryKey: ["accounts"],
-    queryFn: async () => { const { data, error } = await supabase.from("accounts").select("*").order("name"); if (error) throw error; return data as any[]; },
-  });
+  const accounts = settings.accounts;
 
   const net = sale ? Number(sale.total) - Number(sale.discount) : 0;
   const tax = computeTax(net, settings);
