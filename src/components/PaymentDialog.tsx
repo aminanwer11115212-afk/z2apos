@@ -27,13 +27,13 @@ export function PaymentDialog({ open, onClose, direction, party, saleId, purchas
   const settings = useSettings();
 
   const enabledMethods = (Object.keys(settings.paymentMethods) as PaymentMethodKey[])
-    .filter((k) => settings.paymentMethods[k].enabled);
+    .filter((k) => settings.paymentMethods[k]?.enabled);
   const initialMethod: PaymentMethodKey = enabledMethods.includes(settings.defaultMethod)
     ? settings.defaultMethod : (enabledMethods[0] ?? "cash");
 
   const [amount, setAmount] = useState<number>(0);
   const [method, setMethod] = useState<PaymentMethodKey>(initialMethod);
-  const [accountId, setAccountId] = useState(settings.paymentMethods[initialMethod].defaultAccountId);
+  const [accountId, setAccountId] = useState(settings.paymentMethods[initialMethod]?.defaultAccountId ?? "");
   const [txRef, setTxRef] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -41,7 +41,7 @@ export function PaymentDialog({ open, onClose, direction, party, saleId, purchas
     if (open) {
       setAmount(suggested ?? Math.max(0, Number(party.balance) || 0));
       setMethod(initialMethod);
-      setAccountId(settings.paymentMethods[initialMethod].defaultAccountId);
+      setAccountId(settings.paymentMethods[initialMethod]?.defaultAccountId ?? "");
       setTxRef("");
       setNotes("");
     }
@@ -49,13 +49,13 @@ export function PaymentDialog({ open, onClose, direction, party, saleId, purchas
 
   useEffect(() => {
     if (!open) return;
-    setAccountId(settings.paymentMethods[method].defaultAccountId);
+    setAccountId(settings.paymentMethods[method]?.defaultAccountId ?? "");
   }, [method, open, settings.paymentMethods]);
 
   const cfg = settings.paymentMethods[method];
   const acc = settings.accounts.find((a) => a.id === accountId);
   const isDigital = method === "bank" || method === "wallet";
-  const requireRef = isDigital && cfg.requireRef;
+  const requireRef = isDigital && !!cfg?.requireRef;
 
   const projectedBalance = Number(party.balance) - amount;
 
