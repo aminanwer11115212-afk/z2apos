@@ -12,7 +12,7 @@ const ACC_TYPES: { v: AccountType; label: string; icon: ReactNode }[] = [
   { v: "bank", label: "بنكي", icon: <CreditCard className="w-5 h-5 text-primary" /> },
   { v: "wallet", label: "محفظة", icon: <Smartphone className="w-5 h-5 text-purple-500" /> },
 ];
-const PAY_META: Record<PaymentMethodKey, { icon: string; label: string }> = { cash: { icon: "💵", label: "نقدي" }, bank: { icon: "🏦", label: "بنكي" }, wallet: { icon: "📱", label: "محفظة" } };
+const PAY_META: Partial<Record<PaymentMethodKey, { icon: string; label: string }>> = { cash: { icon: "💵", label: "نقدي" }, bank: { icon: "🏦", label: "بنكي" }, wallet: { icon: "📱", label: "محفظة" } };
 function newId() { return (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "id-" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36)); }
 
 function SettingsPage() {
