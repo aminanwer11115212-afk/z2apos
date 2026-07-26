@@ -118,7 +118,7 @@ export function PaymentDialog({ open, onClose, direction, party, saleId, purchas
             {enabledMethods.map((m) => (
               <button key={m} type="button" onClick={() => setMethod(m)}
                 className={`h-10 rounded-lg border text-sm font-medium ${method === m ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
-                {METHOD_META[m].icon} {METHOD_META[m].label}
+                {METHOD_META[m]?.icon} {METHOD_META[m]?.label}
               </button>
             ))}
           </div>
