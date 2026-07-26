@@ -147,6 +147,9 @@ BEGIN
       ELSIF OLD.customer_id IS NOT NULL THEN
         UPDATE public.customers SET balance = balance + delta WHERE id = OLD.customer_id;
       END IF;
+      UPDATE public.accounts a SET balance = a.balance - t.amount
+        FROM public.account_transactions t
+        WHERE t.account_id = a.id AND t.related_id = OLD.id AND t.related_table = 'payments' AND t.type = 'income';
       DELETE FROM public.account_transactions WHERE related_id = OLD.id AND related_table = 'payments' AND type = 'income';
     ELSIF OLD.direction = 'out' THEN
       IF OLD.purchase_id IS NOT NULL THEN
@@ -154,6 +157,9 @@ BEGIN
       ELSIF OLD.supplier_id IS NOT NULL THEN
         UPDATE public.suppliers SET balance = balance + delta WHERE id = OLD.supplier_id;
       END IF;
+      UPDATE public.accounts a SET balance = a.balance + t.amount
+        FROM public.account_transactions t
+        WHERE t.account_id = a.id AND t.related_id = OLD.id AND t.related_table = 'payments' AND t.type = 'expense';
       DELETE FROM public.account_transactions WHERE related_id = OLD.id AND related_table = 'payments' AND type = 'expense';
     END IF;
     RETURN OLD;
