@@ -12,22 +12,17 @@ const ACC_TYPES: { v: AccountType; label: string; icon: ReactNode }[] = [
   { v: "bank", label: "بنكي", icon: <CreditCard className="w-5 h-5 text-primary" /> },
   { v: "wallet", label: "محفظة", icon: <Smartphone className="w-5 h-5 text-purple-500" /> },
 ];
+const PAY_META: Record<PaymentMethodKey, { icon: string; label: string }> = { cash: { icon: "💵", label: "نقدي" }, bank: { icon: "🏦", label: "بنكي" }, wallet: { icon: "📱", label: "محفظة" } };
 
-function safeUUID(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
-  return "id-" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-}
+function newId() { return (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "id-" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36)); }
 
 function SettingsPage() {
   const s = useSettings();
   const [newAcc, setNewAcc] = useState<{ name: string; type: AccountType; note: string }>({ name: "", type: "bank", note: "" });
-
   const addAccount = () => {
     if (!newAcc.name.trim()) return toast.error("الاسم مطلوب");
-    const acc: Account = { id: safeUUID(), name: newAcc.name.trim(), type: newAcc.type, note: newAcc.note.trim() || undefined };
-    saveSettings({ accounts: [...s.accounts, acc] });
-    setNewAcc({ name: "", type: "bank", note: "" });
-    toast.success("تمت الإضافة");
+    const acc: Account = { id: newId(), name: newAcc.name.trim(), type: newAcc.type, note: newAcc.note.trim() || undefined };
+    saveSettings({ accounts: [...s.accounts, acc] }); setNewAcc({ name: "", type: "bank", note: "" }); toast.success("تمت الإضافة");
   };
   const removeAccount = (id: string) => {
     if (s.accounts.length <= 1) return toast.error("يجب أن يبقى حساب واحد على الأقل");
@@ -75,9 +70,7 @@ function SettingsPage() {
       <Section title="طرق الدفع" icon={<Wallet className="w-4 h-4" />}>
         <p className="text-xs text-muted-foreground mb-3">تفعيل/تعطيل الطرق، اختيار الحساب الافتراضي، وإلزام رقم العملية.</p>
         <div className="space-y-2">{(["cash", "bank", "wallet"] as PaymentMethodKey[]).map((k) => {
-          const cfg = s.paymentMethods[k];
-          const meta = { cash: { icon: "💵", label: "نقدي" }, bank: { icon: "🏦", label: "بنكي" }, wallet: { icon: "📱", label: "محفظة" } }[k];
-          const eligible = s.accounts.filter((a) => k === "cash" ? a.type === "cash" : (a.type === "bank" || a.type === "wallet"));
+          const cfg = s.paymentMethods[k], meta = PAY_META[k], eligible = s.accounts.filter((a) => k === "cash" ? a.type === "cash" : (a.type === "bank" || a.type === "wallet"));
           return (
             <div key={k} className="p-3 rounded-lg border bg-card">
               <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
@@ -101,11 +94,4 @@ function SettingsPage() {
           <Field label="رؤية سعر التكلفة"><label className="flex items-center gap-2 h-11 px-3 rounded-lg border bg-background cursor-pointer"><input type="checkbox" checked={s.sellerPerms.seeCost} onChange={(e) => saveSettings({ sellerPerms: { ...s.sellerPerms, seeCost: e.target.checked } })} /><span className="text-sm">يستطيع رؤية التكلفة</span></label></Field>
           <Field label="تعديل السعر في البيع"><label className="flex items-center gap-2 h-11 px-3 rounded-lg border bg-background cursor-pointer"><input type="checkbox" checked={s.sellerPerms.editPrice} onChange={(e) => saveSettings({ sellerPerms: { ...s.sellerPerms, editPrice: e.target.checked } })} /><span className="text-sm">يستطيع تعديل السعر</span></label></Field>
           <Field label="أقصى نسبة خصم %"><Input type="number" min={0} max={100} value={s.sellerPerms.maxDiscountPercent} onChange={(e) => saveSettings({ sellerPerms: { ...s.sellerPerms, maxDiscountPercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)) } })} /></Field>
-        </div>
-      </Section>
-    </div>
-  );
-}
-
-function Section({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
-  return <section className="bg-card border rounded
+        </div
