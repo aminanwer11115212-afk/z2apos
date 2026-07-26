@@ -45,7 +45,7 @@ function SettingsPage() {
           <Field label="نسبة الضريبة %"><Input type="number" min={0} max={100} step="0.01" value={s.taxPercent} onChange={(e) => saveSettings({ taxPercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })} /></Field>
           <Field label="بادئة رقم الفاتورة"><Input value={s.invoicePrefix} onChange={(e) => saveSettings({ invoicePrefix: e.target.value })} placeholder="INV-" /></Field>
           <Field label="عدد نسخ الطباعة"><Input type="number" min={1} max={5} value={s.printCopies} onChange={(e) => saveSettings({ printCopies: Math.max(1, Number(e.target.value) || 1) })} /></Field>
-          <Field label="حد المخزون المنخفض"><Input type="number" min={0} value={s.lowStockDefault} onChange={(e) => saveSettings({ lowStockDefault: Math.max(0, Number(e.target.value) || 0)) })} /></Field>
+          <Field label="حد المخزون المنخفض"><Input type="number" min={0} value={s.lowStockDefault} onChange={(e) => saveSettings({ lowStockDefault: Math.max(0, Number(e.target.value) || 0) })} /></Field>
         </div>
       </Section>
 
