@@ -61,7 +61,7 @@ function SettingsPage() {
 
       <Section title="طرق الدفع" icon={<Wallet className="w-4 h-4" />}>
         <p className="text-xs text-muted-foreground mb-3">تفعيل/تعطيل الطرق، اختيار الحساب الافتراضي، وإلزام رقم العملية.</p>
-        {(["cash", "bank", "wallet"] as PaymentMethodKey[]).map((k) => { const cfg = s.paymentMethods[k], el = eligible(k); return (
+        {(["cash", "bank", "wallet"] as PaymentMethodKey[]).map((k) => { const cfg = s.paymentMethods[k] ?? { enabled: false, defaultAccountId: "", requireRef: false }, el = eligible(k); return (
           <div key={k} className="p-3 rounded-lg border bg-card mb-2">
             <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
               <div className="font-medium">{PAY_META[k].icon} {PAY_META[k].label}</div>
