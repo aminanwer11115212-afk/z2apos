@@ -64,7 +64,7 @@ function SettingsPage() {
         {(["cash", "bank", "wallet"] as PaymentMethodKey[]).map((k) => { const cfg = s.paymentMethods[k] ?? { enabled: false, defaultAccountId: "", requireRef: false }, el = eligible(k); return (
           <div key={k} className="p-3 rounded-lg border bg-card mb-2">
             <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
-              <div className="font-medium">{PAY_META[k].icon} {PAY_META[k].label}</div>
+              <div className="font-medium">{PAY_META[k]?.icon} {PAY_META[k]?.label}</div>
               <div className="flex items-center gap-3 text-xs">
                 <label className="flex items-center gap-1"><input type="checkbox" checked={cfg.enabled} onChange={(e) => updPay(k, { enabled: e.target.checked })} />مفعّلة</label>
                 <label className="flex items-center gap-1"><input type="radio" name="def-method" checked={s.defaultMethod === k} onChange={() => saveSettings({ defaultMethod: k })} />افتراضية</label>
