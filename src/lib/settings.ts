@@ -39,7 +39,7 @@ export type Settings = {
   defaultAccountId: string;
   accounts: Account[];
   // Payment methods
-  paymentMethods: Record<PaymentMethodKey, PaymentMethodConfig>;
+  paymentMethods: Partial<Record<PaymentMethodKey, PaymentMethodConfig>>;
   defaultMethod: PaymentMethodKey;
   // WhatsApp templates
   waInvoiceTemplate: string;
