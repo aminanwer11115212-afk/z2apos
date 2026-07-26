@@ -9,7 +9,8 @@ export type SellerPerms = {
   maxDiscountPercent: number; // 0-100
 };
 
-export type PaymentMethodKey = "cash" | "bank" | "wallet";
+import type { PaymentMethod } from "@/lib/payments";
+export type PaymentMethodKey = PaymentMethod;
 export type PaymentMethodConfig = {
   enabled: boolean;
   defaultAccountId: string;
