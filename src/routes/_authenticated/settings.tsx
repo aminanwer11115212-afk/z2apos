@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Field, Input, Btn, PageHeader } from "@/components/ui-kit";
 import { useSettings, saveSettings, type AccountType, type Account, type PaymentMethodKey } from "@/lib/settings";
 import { Plus, Trash2, CreditCard, Banknote, Smartphone, Percent, Shield, Wallet } from "lucide-react";
@@ -7,11 +7,16 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/settings")({ head: () => ({ meta: [{ title: "الإعدادات — 2A" }] }), component: SettingsPage });
 
-const ACC_TYPES: { v: AccountType; label: string; icon: React.ReactNode }[] = [
+const ACC_TYPES: { v: AccountType; label: string; icon: ReactNode }[] = [
   { v: "cash", label: "نقدي", icon: <Banknote className="w-5 h-5 text-success" /> },
   { v: "bank", label: "بنكي", icon: <CreditCard className="w-5 h-5 text-primary" /> },
   { v: "wallet", label: "محفظة", icon: <Smartphone className="w-5 h-5 text-purple-500" /> },
 ];
+
+function safeUUID(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return "id-" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+}
 
 function SettingsPage() {
   const s = useSettings();
@@ -19,7 +24,7 @@ function SettingsPage() {
 
   const addAccount = () => {
     if (!newAcc.name.trim()) return toast.error("الاسم مطلوب");
-    const acc: Account = { id: crypto.randomUUID(), name: newAcc.name.trim(), type: newAcc.type, note: newAcc.note.trim() || undefined };
+    const acc: Account = { id: safeUUID(), name: newAcc.name.trim(), type: newAcc.type, note: newAcc.note.trim() || undefined };
     saveSettings({ accounts: [...s.accounts, acc] });
     setNewAcc({ name: "", type: "bank", note: "" });
     toast.success("تمت الإضافة");
@@ -53,7 +58,7 @@ function SettingsPage() {
           <Field label="نسبة الضريبة %"><Input type="number" min={0} max={100} step="0.01" value={s.taxPercent} onChange={(e) => saveSettings({ taxPercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })} /></Field>
           <Field label="بادئة رقم الفاتورة"><Input value={s.invoicePrefix} onChange={(e) => saveSettings({ invoicePrefix: e.target.value })} placeholder="INV-" /></Field>
           <Field label="عدد نسخ الطباعة"><Input type="number" min={1} max={5} value={s.printCopies} onChange={(e) => saveSettings({ printCopies: Math.max(1, Number(e.target.value) || 1) })} /></Field>
-          <Field label="حد المخزون المنخفض"><Input type="number" min={0} value={s.lowStockDefault} onChange={(e) => saveSettings({ lowStockDefault: Math.max(0, Number(e.target.value) || 0) })} /></Field>
+          <Field label="حد المخزون المنخفض"><Input type="number" min={0} value={s.lowStockDefault} onChange={(e) => saveSettings({ lowStockDefault: Math.max(0, Number(e.target.value) || 0)) })} /></Field>
         </div>
       </Section>
 
@@ -93,15 +98,4 @@ function SettingsPage() {
 
       <Section title="صلاحيات البائع" icon={<Shield className="w-4 h-4" />}>
         <div className="grid sm:grid-cols-3 gap-3">
-          <Field label="رؤية سعر التكلفة"><label className="flex items-center gap-2 h-11 px-3 rounded-lg border bg-background cursor-pointer"><input type="checkbox" checked={s.sellerPerms.seeCost} onChange={(e) => saveSettings({ sellerPerms: { ...s.sellerPerms, seeCost: e.target.checked } })} /><span className="text-sm">يستطيع رؤية التكلفة</span></label></Field>
-          <Field label="تعديل السعر في البيع"><label className="flex items-center gap-2 h-11 px-3 rounded-lg border bg-background cursor-pointer"><input type="checkbox" checked={s.sellerPerms.editPrice} onChange={(e) => saveSettings({ sellerPerms: { ...s.sellerPerms, editPrice: e.target.checked } })} /><span className="text-sm">يستطيع تعديل السعر</span></label></Field>
-          <Field label="أقصى نسبة خصم %"><Input type="number" min={0} max={100} value={s.sellerPerms.maxDiscountPercent} onChange={(e) => saveSettings({ sellerPerms: { ...s.sellerPerms, maxDiscountPercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)) } })} /></Field>
-        </div>
-      </Section>
-    </div>
-  );
-}
-
-function Section({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
-  return <section className="bg-card border rounded-2xl p-4"><h2 className="font-bold mb-3 flex items-center gap-2">{icon}{title}</h2>{children}</section>;
-}
+          <Field label="رؤية سعر التكلفة"><label className="flex items-center gap-2 h-11 px-3 rounded-lg border bg-background cursor-pointer">
