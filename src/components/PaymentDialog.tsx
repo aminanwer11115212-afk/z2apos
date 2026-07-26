@@ -16,7 +16,7 @@ type Props = {
   suggested?: number;
 };
 
-const METHOD_META: Record<PaymentMethodKey, { label: string; icon: string }> = {
+const METHOD_META: Partial<Record<PaymentMethodKey, { label: string; icon: string }>> = {
   cash: { label: "نقدي", icon: "💵" },
   bank: { label: "بنكي", icon: "🏦" },
   wallet: { label: "محفظة", icon: "📱" },
