@@ -72,13 +72,13 @@ function Reports() {
       const start = new Date(range.from + "T00:00:00").toISOString();
       const end = new Date(range.to + "T23:59:59").toISOString();
 
-      let salesQ = supabase.from("sales").select("id,total,discount,paid,created_at,created_by,customer_id").gte("created_at", start).lte("created_at", end);
+      let salesQ = supabase.from("sales").select("id,total,discount,paid,payment_method,created_at,created_by,customer_id").gte("created_at", start).lte("created_at", end);
       if (sellerId) salesQ = salesQ.eq("created_by", sellerId);
       if (customerId) salesQ = salesQ.eq("customer_id", customerId);
       const { data: sales } = await salesQ;
       const saleIds = (sales ?? []).map((s) => s.id);
 
-      const { data: purchases } = await supabase.from("purchases").select("total,paid,created_at").gte("created_at", start).lte("created_at", end);
+      const { data: purchases } = await supabase.from("purchases").select("id,total,paid,payment_method,created_at").gte("created_at", start).lte("created_at", end);
 
       let partsQ = supabase.from("parts").select("name,category,quantity,cost_price,sell_price,min_quantity");
       if (category) partsQ = partsQ.eq("category", category);
@@ -106,17 +106,31 @@ function Reports() {
       }
       const topProducts = Array.from(topMap.values()).sort((a, b) => b.qty - a.qty).slice(0, 10);
 
-      // Payments breakdown by method
+      // Payments breakdown by method (payments ledger + invoice-time receipts)
       const { data: payments } = await supabase
         .from("payments")
-        .select("amount,method,direction")
+        .select("amount,method,direction,sale_id,purchase_id")
         .gte("created_at", start).lte("created_at", end);
       const methodMap: Record<string, { in: number; out: number }> = {};
-      for (const p of payments ?? []) {
-        const k = p.method ?? "cash";
+      const addToMethod = (k: string, dir: "in" | "out", amount: number) => {
         methodMap[k] ??= { in: 0, out: 0 };
-        if (p.direction === "in") methodMap[k].in += Number(p.amount);
-        else methodMap[k].out += Number(p.amount);
+        methodMap[k][dir] += amount;
+      };
+      const linkedToSale = new Map<string, number>();
+      const linkedToPurchase = new Map<string, number>();
+      for (const p of payments ?? []) {
+        addToMethod(p.method ?? "cash", p.direction === "in" ? "in" : "out", Number(p.amount));
+        if (p.sale_id) linkedToSale.set(p.sale_id, (linkedToSale.get(p.sale_id) ?? 0) + Number(p.amount));
+        if (p.purchase_id) linkedToPurchase.set(p.purchase_id, (linkedToPurchase.get(p.purchase_id) ?? 0) + Number(p.amount));
+      }
+      // sales.paid يشمل الدفعات اللاحقة المرتبطة؛ نطرحها لاحتساب المقبوض عند الإنشاء فقط
+      for (const s of sales ?? []) {
+        const initial = Number(s.paid) - (linkedToSale.get(s.id) ?? 0);
+        if (initial > 0) addToMethod((s as { payment_method?: string | null }).payment_method ?? "cash", "in", initial);
+      }
+      for (const pu of purchases ?? []) {
+        const initial = Number(pu.paid) - (linkedToPurchase.get(pu.id) ?? 0);
+        if (initial > 0) addToMethod((pu as { payment_method?: string | null }).payment_method ?? "cash", "out", initial);
       }
 
       const salesNet = (sales ?? []).reduce((s, r) => s + Number(r.total) - Number(r.discount), 0);

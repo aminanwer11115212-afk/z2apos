@@ -5,12 +5,25 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
 import { PageHeader, Field, Input } from "@/components/ui-kit";
 import { Banknote, CreditCard, Wallet, TrendingUp, TrendingDown } from "lucide-react";
-import { useSettings, type Account } from "@/lib/settings";
+import { useSettings, parseNotes, type Account } from "@/lib/settings";
 
 type Payment = {
   id: string; direction: "in" | "out"; amount: number; method: string | null;
   account_name: string | null; notes: string | null; created_at: string;
   customer_id: string | null; supplier_id: string | null;
+  sale_id: string | null; purchase_id: string | null;
+};
+
+type PaidInvoice = {
+  id: string; invoice_no: number; paid: number;
+  account_name: string | null; payment_method: string | null;
+  notes: string | null; created_at: string;
+};
+
+// حركة موحّدة: دفعات ledger + المقبوض عند إنشاء فواتير البيع/الشراء
+type Movement = {
+  id: string; direction: "in" | "out"; amount: number;
+  account_name: string | null; label: string; created_at: string;
 };
 
 export const Route = createFileRoute("/_authenticated/accounts")({
@@ -36,7 +49,7 @@ function AccountsPage() {
     queryKey: ["payments-all", dateFrom, dateTo],
     queryFn: async () => {
       let q = supabase.from("payments")
-        .select("id,direction,amount,method,account_name,notes,created_at,customer_id,supplier_id")
+        .select("id,direction,amount,method,account_name,notes,created_at,customer_id,supplier_id,sale_id,purchase_id")
         .order("created_at", { ascending: false });
       if (dateFrom) q = q.gte("created_at", dateFrom + "T00:00:00");
       if (dateTo) q = q.lte("created_at", dateTo + "T23:59:59");
@@ -46,22 +59,89 @@ function AccountsPage() {
     },
   });
 
+  const { data: paidSales = [] } = useQuery({
+    queryKey: ["accounts-paid-sales", dateFrom, dateTo],
+    queryFn: async () => {
+      let q = supabase.from("sales")
+        .select("id,invoice_no,paid,account_name,payment_method,notes,created_at")
+        .gt("paid", 0)
+        .order("created_at", { ascending: false });
+      if (dateFrom) q = q.gte("created_at", dateFrom + "T00:00:00");
+      if (dateTo) q = q.lte("created_at", dateTo + "T23:59:59");
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as PaidInvoice[];
+    },
+  });
+
+  const { data: paidPurchases = [] } = useQuery({
+    queryKey: ["accounts-paid-purchases", dateFrom, dateTo],
+    queryFn: async () => {
+      let q = supabase.from("purchases")
+        .select("id,invoice_no,paid,account_name,payment_method,notes,created_at")
+        .gt("paid", 0)
+        .order("created_at", { ascending: false });
+      if (dateFrom) q = q.gte("created_at", dateFrom + "T00:00:00");
+      if (dateTo) q = q.lte("created_at", dateTo + "T23:59:59");
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as PaidInvoice[];
+    },
+  });
+
+  // sales.paid يشمل الدفعات اللاحقة المرتبطة بالفاتورة (المشغّل يزيده)،
+  // لذلك نطرحها لاستخراج المقبوض عند الإنشاء فقط — بلا ازدواج مع صفوف payments.
+  const movements = useMemo(() => {
+    const linkedToSale = new Map<string, number>();
+    const linkedToPurchase = new Map<string, number>();
+    for (const p of payments) {
+      if (p.sale_id) linkedToSale.set(p.sale_id, (linkedToSale.get(p.sale_id) ?? 0) + Number(p.amount));
+      if (p.purchase_id) linkedToPurchase.set(p.purchase_id, (linkedToPurchase.get(p.purchase_id) ?? 0) + Number(p.amount));
+    }
+    const list: Movement[] = payments.map((p) => ({
+      id: p.id, direction: p.direction, amount: Number(p.amount),
+      account_name: p.account_name,
+      label: p.notes ?? (p.direction === "in" ? "تحصيل" : "سداد"),
+      created_at: p.created_at,
+    }));
+    for (const s of paidSales) {
+      const initial = Number(s.paid) - (linkedToSale.get(s.id) ?? 0);
+      if (initial <= 0.009) continue;
+      list.push({
+        id: `sale-${s.id}`, direction: "in", amount: initial,
+        account_name: s.account_name ?? parseNotes(s.notes).account,
+        label: `فاتورة بيع #${s.invoice_no}`, created_at: s.created_at,
+      });
+    }
+    for (const pu of paidPurchases) {
+      const initial = Number(pu.paid) - (linkedToPurchase.get(pu.id) ?? 0);
+      if (initial <= 0.009) continue;
+      list.push({
+        id: `purchase-${pu.id}`, direction: "out", amount: initial,
+        account_name: pu.account_name ?? parseNotes(pu.notes).account,
+        label: `فاتورة شراء #${pu.invoice_no}`, created_at: pu.created_at,
+      });
+    }
+    list.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    return list;
+  }, [payments, paidSales, paidPurchases]);
+
   const balances = useMemo(() => {
     const m = new Map<string, number>();
     for (const a of accounts) m.set(a.name, 0);
-    for (const p of payments) {
+    for (const p of movements) {
       if (!p.account_name) continue;
       const cur = m.get(p.account_name) ?? 0;
-      m.set(p.account_name, cur + (p.direction === "in" ? Number(p.amount) : -Number(p.amount)));
+      m.set(p.account_name, cur + (p.direction === "in" ? p.amount : -p.amount));
     }
     return m;
-  }, [payments, accounts]);
+  }, [movements, accounts]);
 
   const filtered = useMemo(() => {
-    if (selected === "all") return payments;
+    if (selected === "all") return movements;
     const name = accounts.find((a) => a.id === selected)?.name;
-    return payments.filter((p) => p.account_name === name);
-  }, [payments, selected, accounts]);
+    return movements.filter((p) => p.account_name === name);
+  }, [movements, selected, accounts]);
 
   const totals = useMemo(() => {
     let income = 0, expense = 0;
@@ -144,7 +224,7 @@ function AccountsPage() {
                   </span>
                 </td>
                 <td className="p-3 font-semibold">{formatSDG(p.amount)}</td>
-                <td className="p-3 text-muted-foreground">{p.notes ?? "—"}</td>
+                <td className="p-3 text-muted-foreground">{p.label || "—"}</td>
               </tr>
             ))}
             {filtered.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">لا توجد حركات</td></tr>}
