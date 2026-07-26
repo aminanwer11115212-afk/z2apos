@@ -125,7 +125,7 @@ function NewPurchase({ onDone, onCancel }: { onDone: () => void; onCancel: () =>
           <Field label="طريقة الدفع">
             <div className="grid grid-cols-3 gap-2">
               {METHOD_ORDER.map((m) => (
-                <button key={m} type="button" onClick={() => { setMethod(m); setAccountId(settings.paymentMethods[m].defaultAccountId); }} className={`h-10 rounded-lg border text-sm font-medium ${method === m ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
+                <button key={m} type="button" onClick={() => { setMethod(m); setAccountId(settings.paymentMethods[m]?.defaultAccountId ?? ""); }} className={`h-10 rounded-lg border text-sm font-medium ${method === m ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
                   {paymentMethodIcon(m)} {METHOD_LABEL[m]}
                 </button>
               ))}
