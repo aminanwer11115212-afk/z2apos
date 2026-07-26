@@ -65,7 +65,7 @@ function InvoicePaymentPage() {
       const note = [txRef.trim() ? `مرجع: ${txRef.trim()}` : "", notes.trim()].filter(Boolean).join(" · ") || null;
       const { error } = await supabase.from("payments").insert({
         direction: "in", amount, method, account_name: acc?.name ?? null,
-        notes: note, created_by: userRes.data.user?.id ?? null,
+        notes: note, created_by: userRes.user?.id ?? null,
         customer_id: sale.customer_id, sale_id: sale.id,
       });
       if (error) throw error;
