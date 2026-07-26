@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
-import { Modal, Field, Input, Btn, PageHeader, SearchBar, EmptyState, useDialog } from "@/components/ui-kit";
+import { Modal, Field, Input, Btn, PageHeader, SearchBar, EmptyState, useDialog, ConfirmDialog } from "@/components/ui-kit";
 import { PaymentDialog } from "@/components/PaymentDialog";
 import { Plus, Pencil, Trash2, Wallet, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ function SuppliersPage() {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const dialog = useDialog();
+  const [deleting, setDeleting] = useState<Supplier | null>(null);
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [form, setForm] = useState({ name: "", phone: "", address: "" });
   const [payFor, setPayFor] = useState<Supplier | null>(null);
@@ -44,7 +45,7 @@ function SuppliersPage() {
 
   const del = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from("suppliers").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => { toast.success("تم الحذف"); qc.invalidateQueries({ queryKey: ["suppliers"] }); },
+    onSuccess: () => { toast.success("تم الحذف"); qc.invalidateQueries({ queryKey: ["suppliers"] }); setDeleting(null); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -89,7 +90,7 @@ function SuppliersPage() {
                         title="واتساب" className="inline-block p-2 hover:bg-muted rounded-lg"><MessageCircle className="w-4 h-4" /></a>
                     )}
                     <button onClick={() => openEdit(s)} className="p-2 hover:bg-muted rounded-lg"><Pencil className="w-4 h-4" /></button>
-                    <button onClick={() => { if (confirm("حذف هذا المورد؟")) del.mutate(s.id); }}
+                    <button onClick={() => setDeleting(s)}
                       className="p-2 hover:bg-destructive/10 text-destructive rounded-lg"><Trash2 className="w-4 h-4" /></button>
                   </td>
                 </tr>
@@ -117,6 +118,11 @@ function SuppliersPage() {
           party={{ id: payFor.id, name: payFor.name, balance: Number(payFor.balance) }}
           suggested={Number(payFor.balance)} />
       )}
+      <ConfirmDialog open={!!deleting} onClose={() => setDeleting(null)}
+        onConfirm={() => deleting && del.mutate(deleting.id)} pending={del.isPending}
+        title={`حذف المورد «${deleting?.name ?? ""}»؟`}
+        description="سيُحذف المورد نهائياً. فواتير الشراء السابقة تبقى محفوظة لكن بدون ربط بالمورد." />
+
     </div>
   );
 }

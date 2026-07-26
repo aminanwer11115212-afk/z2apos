@@ -1,6 +1,6 @@
 import { type PaymentMethod } from "@/lib/payments";
 
-export type PosPart = { id: string; code: string; name: string; sell_price: number; quantity: number };
+export type PosPart = { id: string; code: string; name: string; sell_price: number; quantity: number; category: string | null };
 export type PosLine = { part: PosPart; qty: number; unit_price: number };
 
 export type HeldSale = {

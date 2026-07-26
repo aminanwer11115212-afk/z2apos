@@ -4,7 +4,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
 import { whatsappUrl } from "@/lib/utils";
-import { Modal, Field, Input, Btn, PageHeader, SearchBar, EmptyState, useDialog } from "@/components/ui-kit";
+import { Modal, Field, Input, Btn, PageHeader, SearchBar, EmptyState, useDialog, ConfirmDialog } from "@/components/ui-kit";
 import { PaymentDialog } from "@/components/PaymentDialog";
 import { Plus, Pencil, Trash2, Wallet, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ function CustomersPage() {
   const [editing, setEditing] = useState<Customer | null>(null);
   const [form, setForm] = useState({ name: "", phone: "", address: "" });
   const [payFor, setPayFor] = useState<Customer | null>(null);
+  const [deleting, setDeleting] = useState<Customer | null>(null);
 
   const { data = [] } = useQuery({
     queryKey: ["customers"],
@@ -49,7 +50,7 @@ function CustomersPage() {
 
   const del = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from("customers").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => { toast.success("تم الحذف"); qc.invalidateQueries({ queryKey: ["customers"] }); },
+    onSuccess: () => { toast.success("تم الحذف"); qc.invalidateQueries({ queryKey: ["customers"] }); setDeleting(null); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -83,7 +84,15 @@ function CustomersPage() {
                     {c.address && <div className="text-xs text-muted-foreground">{c.address}</div>}
                   </td>
                   <td className="p-3" dir="ltr">{c.phone || "—"}</td>
-                  <td className={`p-3 font-semibold ${Number(c.balance) > 0 ? "text-destructive" : ""}`}>{formatSDG(c.balance)}</td>
+                  <td className="p-3 font-semibold">
+                    {Number(c.balance) < 0 ? (
+                      <span className="text-success">{formatSDG(Math.abs(Number(c.balance)))}
+                        <span className="mr-1 text-[10px] px-1.5 py-0.5 rounded-full bg-success/10 font-medium">فائض</span>
+                      </span>
+                    ) : (
+                      <span className={Number(c.balance) > 0 ? "text-destructive" : ""}>{formatSDG(c.balance)}</span>
+                    )}
+                  </td>
                   <td className="p-3 whitespace-nowrap">
                     {Number(c.balance) > 0 && (
                       <button onClick={() => setPayFor(c)} title="تحصيل"
@@ -94,7 +103,7 @@ function CustomersPage() {
                         title="واتساب" className="inline-block p-2 hover:bg-muted rounded-lg"><MessageCircle className="w-4 h-4" /></a>
                     )}
                     <button onClick={() => openEdit(c)} className="p-2 hover:bg-muted rounded-lg"><Pencil className="w-4 h-4" /></button>
-                    <button onClick={() => { if (confirm("حذف هذا العميل؟")) del.mutate(c.id); }}
+                    <button onClick={() => setDeleting(c)}
                       className="p-2 hover:bg-destructive/10 text-destructive rounded-lg"><Trash2 className="w-4 h-4" /></button>
                   </td>
                 </tr>
@@ -122,6 +131,11 @@ function CustomersPage() {
           party={{ id: payFor.id, name: payFor.name, balance: Number(payFor.balance) }}
           suggested={Number(payFor.balance)} />
       )}
+
+      <ConfirmDialog open={!!deleting} onClose={() => setDeleting(null)}
+        onConfirm={() => deleting && del.mutate(deleting.id)} pending={del.isPending}
+        title={`حذف العميل «${deleting?.name ?? ""}»؟`}
+        description="سيُحذف العميل نهائياً. فواتيره السابقة تبقى محفوظة لكن بدون ربط بالعميل." />
     </div>
   );
 }

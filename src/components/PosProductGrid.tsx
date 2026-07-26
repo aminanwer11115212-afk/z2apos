@@ -16,13 +16,22 @@ export function PosProductGrid({
   onAdd: (p: PosPart) => void;
 }) {
   const [page, setPage] = useState(1);
+  const [cat, setCat] = useState<string | null>(null);
   const prevQ = useRef(q);
 
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of parts) if (p.category) set.add(p.category);
+    return Array.from(set).sort();
+  }, [parts]);
+
   const filtered = useMemo(() => {
-    if (!q.trim()) return parts;
+    let list = parts;
+    if (cat) list = list.filter((p) => p.category === cat);
     const s = q.trim();
-    return parts.filter((p) => p.code.includes(s) || p.name.includes(s));
-  }, [q, parts]);
+    if (s) list = list.filter((p) => p.code.includes(s) || p.name.includes(s));
+    return list;
+  }, [q, cat, parts]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageSafe = Math.min(page, pageCount);
@@ -37,6 +46,20 @@ export function PosProductGrid({
 
   return (
     <div className="bg-card border rounded-xl p-2">
+      {categories.length > 0 && (
+        <div className="flex gap-1.5 overflow-x-auto pb-2 mb-1 -mx-0.5 px-0.5">
+          <button type="button" onClick={() => { setCat(null); setPage(1); }}
+            className={`h-8 px-3 rounded-full border text-xs font-medium whitespace-nowrap shrink-0 ${cat === null ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
+            الكل
+          </button>
+          {categories.map((c) => (
+            <button key={c} type="button" onClick={() => { setCat(cat === c ? null : c); setPage(1); }}
+              className={`h-8 px-3 rounded-full border text-xs font-medium whitespace-nowrap shrink-0 ${cat === c ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
       {pageItems.length === 0 ? (
         <div className="p-6 text-center text-sm text-muted-foreground">لا توجد نتائج</div>
       ) : (

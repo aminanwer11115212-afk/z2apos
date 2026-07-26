@@ -46,12 +46,13 @@ function SettingsPage() {
           <Field label="بادئة رقم الفاتورة"><Input value={s.invoicePrefix} onChange={(e) => saveSettings({ invoicePrefix: e.target.value })} placeholder="INV-" /></Field>
           <Field label="عدد نسخ الطباعة"><Input type="number" min={1} max={5} value={s.printCopies} onChange={(e) => saveSettings({ printCopies: Math.max(1, Number(e.target.value) || 1) })} /></Field>
           <Field label="حد المخزون المنخفض"><Input type="number" min={0} value={s.lowStockDefault} onChange={(e) => saveSettings({ lowStockDefault: Math.max(0, Number(e.target.value) || 0) })} /></Field>
+          <Field label="طباعة تلقائية"><label className="flex items-center gap-2 h-11 px-3 rounded-lg border bg-background cursor-pointer"><input type="checkbox" checked={s.autoPrintAfterSale} onChange={(e) => saveSettings({ autoPrintAfterSale: e.target.checked })} /><span className="text-sm">اطبع الفاتورة بعد الحفظ مباشرة</span></label></Field>
         </div>
       </Section>
 
       <Section title="الحسابات المالية" icon={<Banknote className="w-4 h-4" />}>
         <div className="space-y-2 mb-3">{s.accounts.map((a) => <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">{accIcon(a.type)}<div className="flex-1 min-w-0"><div className="font-medium">{a.name}</div><div className="text-xs text-muted-foreground">{accLabel(a.type)}{a.note ? ` · ${a.note}` : ""}</div></div><label className="flex items-center gap-1 text-xs"><input type="radio" name="def-acc" checked={s.defaultAccountId === a.id} onChange={() => saveSettings({ defaultAccountId: a.id })} />افتراضي</label><button onClick={() => remove(a.id)} className="p-2 text-destructive hover:bg-destructive/10 rounded-lg"><Trash2 className="w-4 h-4" /></button></div>)}</div>
-        <div className="grid sm:grid-cols-[1fr,140px,1fr,auto] gap-2 items-end p-3 rounded-lg border bg-muted/30">
+        <div className="grid sm:grid-cols-[1fr_140px_1fr_auto] gap-2 items-end p-3 rounded-lg border bg-muted/30">
           <Field label="اسم الحساب"><Input value={newAcc.name} onChange={(e) => setNewAcc({ ...newAcc, name: e.target.value })} placeholder="مثال: بنك الخرطوم" /></Field>
           <Field label="النوع"><select value={newAcc.type} onChange={(e) => setNewAcc({ ...newAcc, type: e.target.value as AccountType })} className="w-full h-11 px-3 rounded-lg border bg-background">{ACC_TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}</select></Field>
           <Field label="ملاحظة"><Input value={newAcc.note} onChange={(e) => setNewAcc({ ...newAcc, note: e.target.value })} /></Field>

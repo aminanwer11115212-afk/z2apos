@@ -6,7 +6,7 @@ import { formatSDG } from "@/lib/auth";
 import { useSettings, parseNotes, computeTax, formatInvoiceNo, renderTemplate } from "@/lib/settings";
 import { paymentMethodLabel, paymentMethodIcon } from "@/lib/payments";
 import { whatsappUrl } from "@/lib/utils";
-import { Btn } from "@/components/ui-kit";
+import { Btn, LoadingSkeleton } from "@/components/ui-kit";
 import { PaymentDialog } from "@/components/PaymentDialog";
 import { EditInvoiceDialog } from "@/components/EditInvoiceDialog";
 import { PrintFormatPicker } from "@/components/PrintFormatPicker";
@@ -16,6 +16,8 @@ import { ArrowRight, Wallet, MessageCircle, Pencil, ExternalLink } from "lucide-
 
 export const Route = createFileRoute("/_authenticated/sales/$id")({
   head: () => ({ meta: [{ title: "فاتورة — 2A" }] }),
+  validateSearch: (search: Record<string, unknown>): { print?: number } =>
+    search.print ? { print: 1 } : {},
   component: SaleView,
   errorComponent: ({ reset }) => {
     const r = useRouter();
@@ -41,6 +43,8 @@ type SaleFull = {
 
 function SaleView() {
   const { id } = Route.useParams();
+  const { print } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const settings = useSettings();
   const [payOpen, setPayOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -61,7 +65,17 @@ function SaleView() {
     return () => document.body.classList.remove(cls);
   }, [settings.printFormat]);
 
-  if (isLoading || !data) return <div className="p-6 text-center text-muted-foreground">جارٍ التحميل…</div>;
+  // طباعة تلقائية بعد الحفظ من شاشة البيع (?print=1) — تُزال من الرابط بعد التنفيذ
+  useEffect(() => {
+    if (!print || !data) return;
+    const t = setTimeout(() => {
+      window.print();
+      navigate({ search: {}, replace: true });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [print, data, navigate]);
+
+  if (isLoading || !data) return <div className="max-w-3xl mx-auto"><LoadingSkeleton rows={6} /></div>;
 
   const net = Number(data.total) - Number(data.discount);
   const tax = computeTax(net, settings);

@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
 import { useSettings, computeTax } from "@/lib/settings";
 import { PaymentMethod } from "@/lib/payments";
-import { Btn, PageHeader, Field, Input } from "@/components/ui-kit";
+import { Btn, PageHeader, Field, Input, LoadingSkeleton } from "@/components/ui-kit";
 import { ArrowRight, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
@@ -74,7 +74,7 @@ function InvoicePaymentPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  if (isLoading || !sale) return <div className="p-6 text-center text-muted-foreground">جارٍ التحميل…</div>;
+  if (isLoading || !sale) return <div className="max-w-2xl mx-auto"><LoadingSkeleton rows={5} /></div>;
 
   return (
     <div className="p-4 lg:p-6 max-w-2xl mx-auto">

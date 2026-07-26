@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMyRole, formatSDG } from "@/lib/auth";
-import { Modal, Field, Input, Btn, PageHeader, SearchBar, EmptyState, useDialog } from "@/components/ui-kit";
+import { Modal, Field, Input, Btn, PageHeader, SearchBar, EmptyState, useDialog, ConfirmDialog, LoadingSkeleton } from "@/components/ui-kit";
 import { Plus, Pencil, Trash2, AlertTriangle, Barcode as BarcodeIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,6 +29,7 @@ function PartsPage() {
   const isAdmin = role === "admin";
   const [q, setQ] = useState("");
   const dialog = useDialog();
+  const [deleting, setDeleting] = useState<Part | null>(null);
   const [editing, setEditing] = useState<Part | null>(null);
   const [form, setForm] = useState<typeof empty>(empty);
 
@@ -69,7 +70,7 @@ function PartsPage() {
       const { error } = await supabase.from("parts").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("تم الحذف"); qc.invalidateQueries({ queryKey: ["parts"] }); },
+    onSuccess: () => { toast.success("تم الحذف"); qc.invalidateQueries({ queryKey: ["parts"] }); setDeleting(null); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -97,7 +98,7 @@ function PartsPage() {
 
       <div className="mb-4"><SearchBar value={q} onChange={setQ} placeholder="بحث بالاسم، الفئة، نوع السيارة..." /></div>
 
-      {isLoading ? <p className="text-center text-muted-foreground py-8">جارٍ التحميل...</p> :
+      {isLoading ? <LoadingSkeleton rows={6} /> :
        filtered.length === 0 ? <EmptyState title="لا توجد قطع بعد" action={isAdmin && <Btn onClick={openNew}>إضافة أول صنف</Btn>} /> : (
         <div className="bg-card border rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
@@ -130,7 +131,7 @@ function PartsPage() {
                       {isAdmin && (
                         <td className="p-3 whitespace-nowrap">
                           <button onClick={() => openEdit(p)} className="p-2 hover:bg-muted rounded-lg"><Pencil className="w-4 h-4" /></button>
-                          <button onClick={() => { if (confirm("حذف هذا الصنف؟")) del.mutate(p.id); }}
+                          <button onClick={() => setDeleting(p)}
                             className="p-2 hover:bg-destructive/10 text-destructive rounded-lg"><Trash2 className="w-4 h-4" /></button>
                         </td>
                       )}
@@ -164,6 +165,11 @@ function PartsPage() {
           </div>
         </div>
       </Modal>
+      <ConfirmDialog open={!!deleting} onClose={() => setDeleting(null)}
+        onConfirm={() => deleting && del.mutate(deleting.id)} pending={del.isPending}
+        title={`حذف الصنف «${deleting?.name ?? ""}»؟`}
+        description="سيُحذف الصنف من المخزون نهائياً." />
+
     </div>
   );
 }

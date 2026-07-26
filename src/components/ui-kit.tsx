@@ -20,6 +20,32 @@ export function Modal({ open, onClose, title, children, footer }: {
   );
 }
 
+export function LoadingSkeleton({ rows = 5 }: { rows?: number }) {
+  return (
+    <div className="space-y-3 p-4 animate-pulse" aria-label="جارٍ التحميل">
+      <div className="h-8 w-1/3 rounded-lg bg-muted" />
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="h-12 rounded-xl bg-muted" style={{ opacity: 1 - i * 0.12 }} />
+      ))}
+    </div>
+  );
+}
+
+export function ConfirmDialog({ open, onClose, onConfirm, title, description, confirmLabel = "حذف", pending }: {
+  open: boolean; onClose: () => void; onConfirm: () => void;
+  title: string; description?: string; confirmLabel?: string; pending?: boolean;
+}) {
+  return (
+    <Modal open={open} onClose={onClose} title={title}
+      footer={<>
+        <Btn variant="outline" onClick={onClose}>إلغاء</Btn>
+        <Btn variant="danger" onClick={onConfirm} disabled={pending}>{confirmLabel}</Btn>
+      </>}>
+      <p className="text-sm text-muted-foreground">{description ?? "لا يمكن التراجع عن هذا الإجراء."}</p>
+    </Modal>
+  );
+}
+
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>

@@ -44,7 +44,7 @@ export function usePos() {
 
   const { data: parts = [] } = useQuery({
     queryKey: ["parts-lite"],
-    queryFn: async () => { const { data, error } = await supabase.from("parts").select("id,code,name,sell_price,quantity").order("name"); if (error) throw error; return data as PosPart[]; },
+    queryFn: async () => { const { data, error } = await supabase.from("parts").select("id,code,name,sell_price,quantity,category").order("name"); if (error) throw error; return data as PosPart[]; },
   });
   const { data: customers = [] } = useQuery({
     queryKey: ["customers-lite-phone"],
@@ -83,7 +83,7 @@ export function usePos() {
       const items = lines.map((l) => ({ sale_id: sale.id, part_id: l.part.id, qty: l.qty, unit_price: l.unit_price })); const { error: e2 } = await supabase.from("sale_items").insert(items); if (e2) throw e2;
       return sale;
     },
-    onSuccess: (sale) => { toast.success(`تم حفظ الفاتورة #${sale.invoice_no}`); qc.invalidateQueries(); nav({ to: "/sales/$id", params: { id: sale.id } }); },
+    onSuccess: (sale) => { toast.success(`تم حفظ الفاتورة #${sale.invoice_no}`); qc.invalidateQueries(); nav({ to: "/sales/$id", params: { id: sale.id }, search: settings.autoPrintAfterSale ? { print: 1 } : {} }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -103,7 +103,19 @@ export function usePos() {
     window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
   }, [lines, save, paymentMethod, isDigital, held.hold]);
 
-  const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === "Escape") setQ(""); };
+  // Enter (لوحة مفاتيح أو قارئ باركود): تطابق تام مع الكود يضيف الصنف فوراً،
+  // ونتيجة وحيدة للبحث تُضاف أيضاً — ثم يُفرَّغ الحقل جاهزاً للمسح التالي.
+  const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") { setQ(""); return; }
+    if (e.key !== "Enter") return;
+    const s = q.trim();
+    if (!s) return;
+    e.preventDefault();
+    const exact = parts.find((p) => p.code === s);
+    const matches = exact ? [exact] : parts.filter((p) => p.code.includes(s) || p.name.includes(s));
+    if (matches.length === 1) { addPart(matches[0]); setQ(""); }
+    else if (matches.length === 0) toast.error(`لا يوجد صنف بالكود «${s}»`);
+  };
 
   return {
     q, setQ, searchRef, onSearchKey,

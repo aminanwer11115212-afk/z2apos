@@ -1,4 +1,5 @@
 import { PageHeader, Btn } from "@/components/ui-kit";
+import { formatSDG } from "@/lib/auth";
 import { PosProductGrid } from "./PosProductGrid";
 import { PosCart } from "./PosCart";
 import { PosSidebar } from "./PosSidebar";
@@ -42,8 +43,8 @@ export function PosLayout(props: PosLayoutProps) {
         </div>
       } />
 
-      <div className="grid lg:grid-cols-[1fr,320px] gap-3">
-        <div className="space-y-3">
+      <div className="grid lg:grid-cols-[1fr_320px] gap-3">
+        <div className="space-y-3 min-w-0">
           <div className="flex items-center gap-2 h-11 px-3 rounded-xl border bg-card">
             <Search className="w-4 h-4 text-muted-foreground" />
             <input ref={props.searchRef} value={props.q} onChange={(e) => props.setQ(e.target.value)} onKeyDown={props.onSearchKey}
@@ -53,12 +54,6 @@ export function PosLayout(props: PosLayoutProps) {
           </div>
           <PosProductGrid parts={props.parts} q={props.q} onAdd={props.onAdd} />
           <PosCart lines={props.lines} parts={props.parts} canEditPrice={props.canEditPrice} onQty={props.onQty} onPrice={props.onPrice} onRemove={props.onRemove} />
-          {props.lines.length === 0 && (
-            <div className="text-center p-8 text-muted-foreground border rounded-xl bg-card">
-              <div className="mb-2">ابدأ بإضافة أصناف من البحث أو اختيار صنف سريع</div>
-              <Btn onClick={() => props.searchRef.current?.focus()}><Search className="w-4 h-4 inline ml-1" />بحث</Btn>
-            </div>
-          )}
         </div>
 
         <PosSidebar
@@ -75,6 +70,18 @@ export function PosLayout(props: PosLayoutProps) {
           customerRef={props.customerRef} methodRef={props.methodRef} accountRef={props.accountRef}
         />
       </div>
+
+      {props.lines.length > 0 && (
+        <div className="lg:hidden fixed bottom-16 inset-x-0 z-20 bg-card border-t px-3 py-2 flex items-center gap-3 shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
+          <div className="flex-1 min-w-0">
+            <div className="text-[11px] text-muted-foreground">{props.lines.length} صنف · الإجمالي</div>
+            <div className="font-bold text-sm truncate">{formatSDG(props.total)}</div>
+          </div>
+          <Btn onClick={props.onSave} disabled={props.savePending || props.lines.length === 0} className="h-10 px-6">
+            حفظ الفاتورة
+          </Btn>
+        </div>
+      )}
 
       <PosCustomerDialog isOpen={props.custDialog.isOpen} onClose={props.custDialog.close} form={props.custDialog.form} setForm={props.custDialog.setForm} save={props.custDialog.save} />
       <PosHeldDialog open={props.holdOpen} onClose={() => props.setHoldOpen(false)} held={props.held} onResume={props.onResume} onDrop={props.onDrop} />

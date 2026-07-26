@@ -30,6 +30,7 @@ export type Settings = {
   printCopies: number;
   showLogo: boolean;
   customLogoUrl: string | null; // data URL if uploaded
+  autoPrintAfterSale: boolean; // فتح نافذة الطباعة تلقائياً بعد حفظ البيع
   // Financial
   taxEnabled: boolean;
   taxPercent: number;
@@ -60,6 +61,7 @@ const DEFAULTS: Settings = {
   printCopies: 1,
   showLogo: true,
   customLogoUrl: null,
+  autoPrintAfterSale: false,
   taxEnabled: false,
   taxPercent: 0,
   invoicePrefix: "",

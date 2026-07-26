@@ -84,7 +84,7 @@ function NewPurchase({ onDone, onCancel }: { onDone: () => void; onCancel: () =>
   return (
     <div className="p-4 lg:p-6 max-w-6xl mx-auto">
       <PageHeader title="فاتورة شراء جديدة" actions={<Btn variant="outline" onClick={onCancel}>إلغاء</Btn>} />
-      <div className="grid lg:grid-cols-[1fr,360px] gap-4">
+      <div className="grid lg:grid-cols-[1fr_360px] gap-4">
         <div className="space-y-4">
           <div className="relative">
             <div className="flex items-center gap-2 h-12 px-3 rounded-xl border bg-card"><Search className="w-4 h-4 text-muted-foreground" /><input value={q} onChange={(e) => setQ(e.target.value)} autoFocus placeholder="ابحث عن قطعة لإضافتها..." className="flex-1 bg-transparent outline-none" /></div>

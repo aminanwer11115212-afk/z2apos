@@ -17,7 +17,8 @@ export function PosCart({ lines, parts, canEditPrice, onQty, onPrice, onRemove }
       {lines.length === 0 ? (
         <div className="p-6 text-center text-sm text-muted-foreground">اختر منتجاً من الأعلى للبدء</div>
       ) : (
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-105">
           <thead className="bg-muted/50 text-xs">
             <tr>
               <th className="text-right p-2 font-medium">الصنف</th>
@@ -62,6 +63,7 @@ export function PosCart({ lines, parts, canEditPrice, onQty, onPrice, onRemove }
             })}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );

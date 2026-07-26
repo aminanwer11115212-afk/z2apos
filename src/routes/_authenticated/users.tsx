@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { useMyRole } from "@/lib/auth";
-import { PageHeader, EmptyState, Modal, Field, Input, Btn, useDialog } from "@/components/ui-kit";
+import { PageHeader, EmptyState, Modal, Field, Input, Btn, useDialog, LoadingSkeleton } from "@/components/ui-kit";
 import { toast } from "sonner";
 import { adminListUsers, adminCreateUser, adminResetPassword, adminSetRole, adminDeleteUser } from "@/lib/admin.functions";
 import { Plus, Key, Trash2 } from "lucide-react";
@@ -66,7 +66,7 @@ function UsersPage() {
       <PageHeader title="المستخدمون" subtitle={`${data.length} مستخدم`}
         actions={<Btn onClick={() => newDlg.show()}><Plus className="w-4 h-4 inline ml-1" />مستخدم جديد</Btn>} />
 
-      {isLoading ? <p className="text-center text-muted-foreground py-8">جارٍ التحميل...</p> :
+      {isLoading ? <LoadingSkeleton rows={4} /> :
        data.length === 0 ? <EmptyState title="لا يوجد مستخدمون" /> : (
         <div className="bg-card border rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
