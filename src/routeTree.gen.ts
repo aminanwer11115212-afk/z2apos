@@ -29,7 +29,6 @@ import { Route as AuthenticatedSalesIdRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedPurchasesIdRouteImport } from './routes/_authenticated/purchases.$id'
 import { Route as AuthenticatedPartsLabelsRouteImport } from './routes/_authenticated/parts.labels'
 import { Route as AuthenticatedCustomersIdRouteImport } from './routes/_authenticated/customers.$id'
-import { Route as AuthenticatedAccountsTransferRouteImport } from './routes/_authenticated/accounts.transfer'
 import { Route as AuthenticatedSalesIdPayRouteImport } from './routes/_authenticated/sales.$id.pay'
 
 const AuthRoute = AuthRouteImport.update({
@@ -135,12 +134,6 @@ const AuthenticatedCustomersIdRoute =
     path: '/$id',
     getParentRoute: () => AuthenticatedCustomersRoute,
   } as any)
-const AuthenticatedAccountsTransferRoute =
-  AuthenticatedAccountsTransferRouteImport.update({
-    id: '/transfer',
-    path: '/transfer',
-    getParentRoute: () => AuthenticatedAccountsRoute,
-  } as any)
 const AuthenticatedSalesIdPayRoute = AuthenticatedSalesIdPayRouteImport.update({
   id: '/pay',
   path: '/pay',
@@ -150,7 +143,7 @@ const AuthenticatedSalesIdPayRoute = AuthenticatedSalesIdPayRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/accounts': typeof AuthenticatedAccountsRouteWithChildren
+  '/accounts': typeof AuthenticatedAccountsRoute
   '/customers': typeof AuthenticatedCustomersRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/data': typeof AuthenticatedDataRoute
@@ -160,7 +153,6 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
-  '/accounts/transfer': typeof AuthenticatedAccountsTransferRoute
   '/customers/$id': typeof AuthenticatedCustomersIdRoute
   '/parts/labels': typeof AuthenticatedPartsLabelsRoute
   '/purchases/$id': typeof AuthenticatedPurchasesIdRoute
@@ -173,7 +165,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/accounts': typeof AuthenticatedAccountsRouteWithChildren
+  '/accounts': typeof AuthenticatedAccountsRoute
   '/customers': typeof AuthenticatedCustomersRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/data': typeof AuthenticatedDataRoute
@@ -183,7 +175,6 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
-  '/accounts/transfer': typeof AuthenticatedAccountsTransferRoute
   '/customers/$id': typeof AuthenticatedCustomersIdRoute
   '/parts/labels': typeof AuthenticatedPartsLabelsRoute
   '/purchases/$id': typeof AuthenticatedPurchasesIdRoute
@@ -198,7 +189,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/_authenticated/accounts': typeof AuthenticatedAccountsRouteWithChildren
+  '/_authenticated/accounts': typeof AuthenticatedAccountsRoute
   '/_authenticated/customers': typeof AuthenticatedCustomersRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/data': typeof AuthenticatedDataRoute
@@ -208,7 +199,6 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
   '/_authenticated/users': typeof AuthenticatedUsersRoute
-  '/_authenticated/accounts/transfer': typeof AuthenticatedAccountsTransferRoute
   '/_authenticated/customers/$id': typeof AuthenticatedCustomersIdRoute
   '/_authenticated/parts/labels': typeof AuthenticatedPartsLabelsRoute
   '/_authenticated/purchases/$id': typeof AuthenticatedPurchasesIdRoute
@@ -233,7 +223,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/suppliers'
     | '/users'
-    | '/accounts/transfer'
     | '/customers/$id'
     | '/parts/labels'
     | '/purchases/$id'
@@ -256,7 +245,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/suppliers'
     | '/users'
-    | '/accounts/transfer'
     | '/customers/$id'
     | '/parts/labels'
     | '/purchases/$id'
@@ -280,7 +268,6 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/suppliers'
     | '/_authenticated/users'
-    | '/_authenticated/accounts/transfer'
     | '/_authenticated/customers/$id'
     | '/_authenticated/parts/labels'
     | '/_authenticated/purchases/$id'
@@ -439,13 +426,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCustomersIdRouteImport
       parentRoute: typeof AuthenticatedCustomersRoute
     }
-    '/_authenticated/accounts/transfer': {
-      id: '/_authenticated/accounts/transfer'
-      path: '/transfer'
-      fullPath: '/accounts/transfer'
-      preLoaderRoute: typeof AuthenticatedAccountsTransferRouteImport
-      parentRoute: typeof AuthenticatedAccountsRoute
-    }
     '/_authenticated/sales/$id/pay': {
       id: '/_authenticated/sales/$id/pay'
       path: '/pay'
@@ -455,19 +435,6 @@ declare module '@tanstack/react-router' {
     }
   }
 }
-
-interface AuthenticatedAccountsRouteChildren {
-  AuthenticatedAccountsTransferRoute: typeof AuthenticatedAccountsTransferRoute
-}
-
-const AuthenticatedAccountsRouteChildren: AuthenticatedAccountsRouteChildren = {
-  AuthenticatedAccountsTransferRoute: AuthenticatedAccountsTransferRoute,
-}
-
-const AuthenticatedAccountsRouteWithChildren =
-  AuthenticatedAccountsRoute._addFileChildren(
-    AuthenticatedAccountsRouteChildren,
-  )
 
 interface AuthenticatedCustomersRouteChildren {
   AuthenticatedCustomersIdRoute: typeof AuthenticatedCustomersIdRoute
@@ -534,7 +501,7 @@ const AuthenticatedSalesIdRouteWithChildren =
   AuthenticatedSalesIdRoute._addFileChildren(AuthenticatedSalesIdRouteChildren)
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedAccountsRoute: typeof AuthenticatedAccountsRouteWithChildren
+  AuthenticatedAccountsRoute: typeof AuthenticatedAccountsRoute
   AuthenticatedCustomersRoute: typeof AuthenticatedCustomersRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDataRoute: typeof AuthenticatedDataRoute
@@ -550,7 +517,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedAccountsRoute: AuthenticatedAccountsRouteWithChildren,
+  AuthenticatedAccountsRoute: AuthenticatedAccountsRoute,
   AuthenticatedCustomersRoute: AuthenticatedCustomersRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDataRoute: AuthenticatedDataRoute,
