@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from "react";
 
 export type PrintFormat = "a4" | "thermal80" | "thermal58";
-export type Account = { id: string; name: string; type: "cash" | "bank" | "wallet"; note?: string };
+export type AccountType = "cash" | "bank" | "wallet";
+export type Account = { id: string; name: string; type: AccountType; note?: string };
 
 export type SellerPerms = {
   seeCost: boolean;
