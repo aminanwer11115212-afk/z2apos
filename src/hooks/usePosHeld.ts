@@ -1,11 +1,11 @@
 import { useState, type Dispatch, type SetStateAction, type RefObject } from "react";
-import { HeldSale, loadHeld, saveHeld } from "@/lib/pos";
+import { HeldSale, loadHeld, saveHeld, type PosLine } from "@/lib/pos";
 import { toast } from "sonner";
 import type { PaymentMethod } from "@/lib/payments";
 
 type UsePosHeldArgs = {
-  lines: { qty: number; unit_price: number; part: { id: string; name: string; sell_price: number; quantity: number } }[];
-  setLines: Dispatch<SetStateAction<{ qty: number; unit_price: number; part: { id: string; name: string; sell_price: number; quantity: number } }[]>>;
+  lines: PosLine[];
+  setLines: Dispatch<SetStateAction<PosLine[]>>;
   setCustomerId: Dispatch<SetStateAction<string>>;
   setDiscount: Dispatch<SetStateAction<number>>;
   setPaid: Dispatch<SetStateAction<number>>;

@@ -45,10 +45,7 @@ function InvoicePaymentPage() {
       return data as any;
     },
   });
-  const { data: accounts = [] } = useQuery({
-    queryKey: ["accounts"],
-    queryFn: async () => { const { data, error } = await supabase.from("accounts").select("*").order("name"); if (error) throw error; return data as any[]; },
-  });
+  const accounts = settings.accounts;
 
   const net = sale ? Number(sale.total) - Number(sale.discount) : 0;
   const tax = computeTax(net, settings);
@@ -68,7 +65,7 @@ function InvoicePaymentPage() {
       const note = [txRef.trim() ? `مرجع: ${txRef.trim()}` : "", notes.trim()].filter(Boolean).join(" · ") || null;
       const { error } = await supabase.from("payments").insert({
         direction: "in", amount, method, account_name: acc?.name ?? null,
-        notes: note, created_by: userRes.data.user?.id ?? null,
+        notes: note, created_by: userRes.user?.id ?? null,
         customer_id: sale.customer_id, sale_id: sale.id,
       });
       if (error) throw error;

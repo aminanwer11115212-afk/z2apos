@@ -12,7 +12,7 @@ const ACC_TYPES: { v: AccountType; label: string; icon: ReactNode }[] = [
   { v: "bank", label: "بنكي", icon: <CreditCard className="w-5 h-5 text-primary" /> },
   { v: "wallet", label: "محفظة", icon: <Smartphone className="w-5 h-5 text-purple-500" /> },
 ];
-const PAY_META: Record<PaymentMethodKey, { icon: string; label: string }> = { cash: { icon: "💵", label: "نقدي" }, bank: { icon: "🏦", label: "بنكي" }, wallet: { icon: "📱", label: "محفظة" } };
+const PAY_META: Partial<Record<PaymentMethodKey, { icon: string; label: string }>> = { cash: { icon: "💵", label: "نقدي" }, bank: { icon: "🏦", label: "بنكي" }, wallet: { icon: "📱", label: "محفظة" } };
 function newId() { return (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "id-" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36)); }
 
 function SettingsPage() {
@@ -45,7 +45,7 @@ function SettingsPage() {
           <Field label="نسبة الضريبة %"><Input type="number" min={0} max={100} step="0.01" value={s.taxPercent} onChange={(e) => saveSettings({ taxPercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })} /></Field>
           <Field label="بادئة رقم الفاتورة"><Input value={s.invoicePrefix} onChange={(e) => saveSettings({ invoicePrefix: e.target.value })} placeholder="INV-" /></Field>
           <Field label="عدد نسخ الطباعة"><Input type="number" min={1} max={5} value={s.printCopies} onChange={(e) => saveSettings({ printCopies: Math.max(1, Number(e.target.value) || 1) })} /></Field>
-          <Field label="حد المخزون المنخفض"><Input type="number" min={0} value={s.lowStockDefault} onChange={(e) => saveSettings({ lowStockDefault: Math.max(0, Number(e.target.value) || 0)) })} /></Field>
+          <Field label="حد المخزون المنخفض"><Input type="number" min={0} value={s.lowStockDefault} onChange={(e) => saveSettings({ lowStockDefault: Math.max(0, Number(e.target.value) || 0) })} /></Field>
         </div>
       </Section>
 
@@ -61,10 +61,10 @@ function SettingsPage() {
 
       <Section title="طرق الدفع" icon={<Wallet className="w-4 h-4" />}>
         <p className="text-xs text-muted-foreground mb-3">تفعيل/تعطيل الطرق، اختيار الحساب الافتراضي، وإلزام رقم العملية.</p>
-        {(["cash", "bank", "wallet"] as PaymentMethodKey[]).map((k) => { const cfg = s.paymentMethods[k], el = eligible(k); return (
+        {(["cash", "bank", "wallet"] as PaymentMethodKey[]).map((k) => { const cfg = s.paymentMethods[k] ?? { enabled: false, defaultAccountId: "", requireRef: false }, el = eligible(k); return (
           <div key={k} className="p-3 rounded-lg border bg-card mb-2">
             <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
-              <div className="font-medium">{PAY_META[k].icon} {PAY_META[k].label}</div>
+              <div className="font-medium">{PAY_META[k]?.icon} {PAY_META[k]?.label}</div>
               <div className="flex items-center gap-3 text-xs">
                 <label className="flex items-center gap-1"><input type="checkbox" checked={cfg.enabled} onChange={(e) => updPay(k, { enabled: e.target.checked })} />مفعّلة</label>
                 <label className="flex items-center gap-1"><input type="radio" name="def-method" checked={s.defaultMethod === k} onChange={() => saveSettings({ defaultMethod: k })} />افتراضية</label>

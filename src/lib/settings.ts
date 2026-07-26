@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from "react";
 
 export type PrintFormat = "a4" | "thermal80" | "thermal58";
-export type Account = { id: string; name: string; type: "cash" | "bank" | "wallet"; note?: string };
+export type AccountType = "cash" | "bank" | "wallet";
+export type Account = { id: string; name: string; type: AccountType; note?: string };
 
 export type SellerPerms = {
   seeCost: boolean;
@@ -9,7 +10,8 @@ export type SellerPerms = {
   maxDiscountPercent: number; // 0-100
 };
 
-export type PaymentMethodKey = "cash" | "bank" | "wallet";
+import type { PaymentMethod } from "@/lib/payments";
+export type PaymentMethodKey = PaymentMethod;
 export type PaymentMethodConfig = {
   enabled: boolean;
   defaultAccountId: string;
@@ -37,7 +39,7 @@ export type Settings = {
   defaultAccountId: string;
   accounts: Account[];
   // Payment methods
-  paymentMethods: Record<PaymentMethodKey, PaymentMethodConfig>;
+  paymentMethods: Partial<Record<PaymentMethodKey, PaymentMethodConfig>>;
   defaultMethod: PaymentMethodKey;
   // WhatsApp templates
   waInvoiceTemplate: string;

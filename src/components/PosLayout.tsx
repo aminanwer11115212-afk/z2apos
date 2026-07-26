@@ -13,12 +13,12 @@ type Customer = { id: string; name: string; phone: string | null };
 type Account = { id: string; name: string; type: "cash" | "bank" | "wallet" };
 
 type PosLayoutProps = {
-  q: string; setQ: (v: string) => void; searchRef: React.RefObject<HTMLInputElement>; onSearchKey: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  q: string; setQ: (v: string) => void; searchRef: React.RefObject<HTMLInputElement | null>; onSearchKey: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   parts: PosPart[]; onAdd: (p: PosPart) => void;
   lines: PosLine[]; canEditPrice: boolean; onQty: (id: string, qty: number) => void; onPrice: (id: string, price: number) => void; onRemove: (id: string) => void;
-  customers: Customer[]; customerId: string; onCustomerId: (id: string) => void; onAddCustomer: () => void; customerRef: React.RefObject<HTMLSelectElement>;
-  paymentMethod: PaymentMethod; onPaymentMethod: (m: PaymentMethod) => void; methodRef: React.RefObject<HTMLButtonElement>;
-  bankAccountId: string; onBankAccountId: (id: string) => void; accountRef: React.RefObject<HTMLDivElement>;
+  customers: Customer[]; customerId: string; onCustomerId: (id: string) => void; onAddCustomer: () => void; customerRef: React.RefObject<HTMLSelectElement | null>;
+  paymentMethod: PaymentMethod; onPaymentMethod: (m: PaymentMethod) => void; methodRef: React.RefObject<HTMLButtonElement | null>;
+  bankAccountId: string; onBankAccountId: (id: string) => void; accountRef: React.RefObject<HTMLDivElement | null>;
   txRef: string; onTxRef: (v: string) => void;
   discount: number; onDiscount: (v: number) => void;
   paid: number; onPaid: (v: number) => void;

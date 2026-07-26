@@ -58,7 +58,7 @@ function NewPurchase({ onDone, onCancel }: { onDone: () => void; onCancel: () =>
   const settings = useSettings();
   const [q, setQ] = useState(""); const [lines, setLines] = useState<Line[]>([]); const [supplierId, setSupplierId] = useState("");
   const [paid, setPaid] = useState(0); const [method, setMethod] = useState<PaymentMethod>(settings.defaultMethod);
-  const [accountId, setAccountId] = useState(settings.paymentMethods[method].defaultAccountId); const [txRef, setTxRef] = useState(""); const [notes, setNotes] = useState("");
+  const [accountId, setAccountId] = useState(settings.paymentMethods[method]?.defaultAccountId ?? ""); const [txRef, setTxRef] = useState(""); const [notes, setNotes] = useState("");
   const { data: parts = [] } = useQuery({ queryKey: ["parts-lite-cost"], queryFn: async () => { const { data, error } = await supabase.from("parts").select("id,code,name,cost_price").order("name"); if (error) throw error; return data as Part[]; } });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers-lite"], queryFn: async () => { const { data, error } = await supabase.from("suppliers").select("id,name").order("name"); if (error) throw error; return data as { id: string; name: string }[]; } });
   const results = useMemo(() => !q ? [] : parts.filter((p) => p.code.includes(q) || p.name.includes(q)).slice(0, 8), [q, parts]);
@@ -125,7 +125,7 @@ function NewPurchase({ onDone, onCancel }: { onDone: () => void; onCancel: () =>
           <Field label="طريقة الدفع">
             <div className="grid grid-cols-3 gap-2">
               {METHOD_ORDER.map((m) => (
-                <button key={m} type="button" onClick={() => { setMethod(m); setAccountId(settings.paymentMethods[m].defaultAccountId); }} className={`h-10 rounded-lg border text-sm font-medium ${method === m ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
+                <button key={m} type="button" onClick={() => { setMethod(m); setAccountId(settings.paymentMethods[m]?.defaultAccountId ?? ""); }} className={`h-10 rounded-lg border text-sm font-medium ${method === m ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
                   {paymentMethodIcon(m)} {METHOD_LABEL[m]}
                 </button>
               ))}
