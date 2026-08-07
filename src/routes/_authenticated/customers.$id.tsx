@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
-import { useSettings, renderTemplate } from "@/lib/settings";
+import { useSettings, renderTemplate, saleTotals } from "@/lib/settings";
 import { paymentMethodLabel } from "@/lib/payments";
 import { whatsappUrl } from "@/lib/utils";
 import { Btn, PageHeader } from "@/components/ui-kit";
@@ -38,7 +38,7 @@ function CustomerStatement() {
     queryKey: ["customer-statement", id],
     queryFn: async () => {
       const [salesRes, paymentsRes] = await Promise.all([
-        supabase.from("sales").select("id,invoice_no,total,discount,paid,created_at,notes").eq("customer_id", id).order("created_at"),
+        supabase.from("sales").select("id,invoice_no,total,discount,tax_amount,paid,created_at,notes").eq("customer_id", id).order("created_at"),
         supabase.from("payments").select("id,amount,method,account_name,notes,created_at,sale_id").eq("customer_id", id).eq("direction", "in").order("created_at"),
       ]);
       // A payment linked to a sale is already folded into sales.paid by the
@@ -51,12 +51,12 @@ function CustomerStatement() {
 
       const list: Row[] = [];
       for (const s of salesRes.data ?? []) {
-        const net = Number(s.total) - Number(s.discount);
+        const { grand } = saleTotals(s); // debit is the tax-inclusive total the customer owes
         // Deliberately unclamped: if an admin edits sales.paid below the recorded
         // payments, the negative shows as a reversal and the statement still
         // reconciles with customers.balance instead of silently drifting.
         const paidAtSale = Number(s.paid) - (linkedToSale.get(s.id) ?? 0);
-        list.push({ kind: "sale", id: s.id, date: s.created_at, ref: `فاتورة #${s.invoice_no}`, debit: net, credit: paidAtSale, note: s.notes ?? "" });
+        list.push({ kind: "sale", id: s.id, date: s.created_at, ref: `فاتورة #${s.invoice_no}`, debit: grand, credit: paidAtSale, note: s.notes ?? "" });
       }
       for (const p of paymentsRes.data ?? []) {
         list.push({ kind: "payment", id: p.id, date: p.created_at, ref: `دفعة${p.sale_id ? " (على فاتورة)" : ""}`, debit: 0, credit: Number(p.amount), note: `${paymentMethodLabel(p.method)}${p.account_name ? " · " + p.account_name : ""}${p.notes ? " · " + p.notes : ""}` });

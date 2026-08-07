@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
-import { useSettings, computeTax } from "@/lib/settings";
+import { useSettings, saleTotals } from "@/lib/settings";
 import { PaymentMethod } from "@/lib/payments";
 import { Btn, PageHeader, Field, Input } from "@/components/ui-kit";
 import { ArrowRight, Wallet } from "lucide-react";
@@ -22,7 +22,7 @@ const meta: Record<PaymentMethod, { icon: string; label: string }> = {
   credit: { icon: "📝", label: "آجل" },
 };
 type Sale = {
-  id: string; invoice_no: number; total: number; discount: number; paid: number;
+  id: string; invoice_no: number; total: number; discount: number; tax_amount: number; paid: number;
   created_at: string; notes: string | null;
   payment_method: string | null; account_name: string | null; customer_id: string | null;
   customers: { id: string; name: string; phone: string | null; balance: number } | null;
@@ -53,7 +53,7 @@ function InvoicePaymentPage() {
     queryKey: ["sale-pay", id],
     queryFn: async () => {
       const { data, error } = await supabase.from("sales")
-        .select("id,invoice_no,total,discount,paid,created_at,notes,payment_method,account_name,customer_id, customers(id,name,phone,balance)")
+        .select("id,invoice_no,total,discount,tax_amount,paid,created_at,notes,payment_method,account_name,customer_id, customers(id,name,phone,balance)")
         .eq("id", id).single();
       if (error) throw error;
       return data as unknown as Sale;
@@ -61,9 +61,8 @@ function InvoicePaymentPage() {
   });
   const accounts = settings.accounts;
 
-  const net = sale ? Number(sale.total) - Number(sale.discount) : 0;
-  const tax = computeTax(net, settings);
-  const due = sale ? Math.max(0, tax.grand - Number(sale.paid)) : 0;
+  const grand = sale ? saleTotals(sale).grand : 0;
+  const due = sale ? Math.max(0, grand - Number(sale.paid)) : 0;
   const isDigital = method === "bank" || method === "wallet";
   const accountsFor = (m: PaymentMethod) =>
     accounts.filter((a) => (m === "cash" ? a.type === "cash" : a.type === "bank" || a.type === "wallet"));
@@ -109,7 +108,7 @@ function InvoicePaymentPage() {
       <PageHeader title={`تسجيل دفعة — فاتورة #${sale.invoice_no}`} subtitle={sale.customers?.name ?? "نقدي"} />
       <div className="bg-card border rounded-2xl p-4 space-y-4">
         <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="p-3 rounded-lg bg-muted/50"><div className="text-xs text-muted-foreground">الإجمالي</div><div className="font-bold">{formatSDG(tax.grand)}</div></div>
+          <div className="p-3 rounded-lg bg-muted/50"><div className="text-xs text-muted-foreground">الإجمالي</div><div className="font-bold">{formatSDG(grand)}</div></div>
           <div className="p-3 rounded-lg bg-muted/50"><div className="text-xs text-muted-foreground">المدفوع</div><div className="font-bold">{formatSDG(Number(sale.paid))}</div></div>
           <div className="p-3 rounded-lg bg-muted/50"><div className="text-xs text-muted-foreground">المتبقي</div><div className="font-bold text-destructive">{formatSDG(due)}</div></div>
         </div>

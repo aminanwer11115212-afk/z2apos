@@ -175,6 +175,10 @@
   }
   body.print-format-thermal58 .print-area thead { background: transparent !important; }
 
+  /* Extra copies of an invoice (settings.printCopies) — screen-hidden, each on
+     its own sheet. */
+  .print-copy { display: block !important; break-before: page; page-break-before: always; }
+
   /* Hide bulky columns / blocks on thermal receipts */
   body.print-format-thermal80 .hide-on-thermal,
   body.print-format-thermal58 .hide-on-thermal { display: none !important; }
@@ -189,6 +193,7 @@
   }
 }
 .print-only { display: none; }
+.print-copy { display: none; }
 
 
 /* ============================================================

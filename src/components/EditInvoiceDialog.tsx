@@ -16,6 +16,7 @@ type Props = {
     id: string;
     total: number;
     discount?: number;
+    tax_amount?: number;
     paid: number;
     payment_method: string | null;
     account_name: string | null;
@@ -59,7 +60,16 @@ export function EditInvoiceDialog({ open, onClose, kind, invoice }: Props) {
 
   const total = Number(invoice.total);
   const net = kind === "sale" ? total - discount : total;
-  const due = Math.max(0, net - paid);
+
+  // Changing the discount changes the taxable base, so the tax has to follow.
+  // Derive the rate from the invoice itself rather than from current settings —
+  // editing an old invoice must not retroactively tax one that carried no tax,
+  // nor re-price one issued at a different rate.
+  const originalNet = total - Number(invoice.discount ?? 0);
+  const taxRate = originalNet > 0 ? Number(invoice.tax_amount ?? 0) / originalNet : 0;
+  const taxAmount = kind === "sale" ? Math.max(0, net) * taxRate : 0;
+  const grand = net + taxAmount;
+  const due = Math.max(0, grand - paid);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -70,7 +80,7 @@ export function EditInvoiceDialog({ open, onClose, kind, invoice }: Props) {
       const finalNotes = acc ? encodeNotes(acc.name, noteText, ref) : (noteText || null);
       const basePatch = { paid, payment_method: method, account_name: acc?.name ?? null, notes: finalNotes || null };
       if (kind === "sale") {
-        const { error } = await supabase.from("sales").update({ ...basePatch, discount }).eq("id", invoice.id);
+        const { error } = await supabase.from("sales").update({ ...basePatch, discount, tax_amount: taxAmount }).eq("id", invoice.id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("purchases").update(basePatch).eq("id", invoice.id);
@@ -101,7 +111,7 @@ export function EditInvoiceDialog({ open, onClose, kind, invoice }: Props) {
           <div className="flex gap-2">
             <Input type="number" step="0.01" min={0} value={paid}
               onChange={(e) => setPaid(Math.max(0, Number(e.target.value) || 0))} />
-            <Btn variant="outline" type="button" onClick={() => setPaid(net)} className="shrink-0 text-xs px-3">دفع كامل</Btn>
+            <Btn variant="outline" type="button" onClick={() => setPaid(grand)} className="shrink-0 text-xs px-3">دفع كامل</Btn>
           </div>
         </Field>
 
@@ -140,6 +150,12 @@ export function EditInvoiceDialog({ open, onClose, kind, invoice }: Props) {
 
         <div className="p-3 rounded-lg bg-muted/50 text-sm space-y-1">
           <div className="flex justify-between"><span className="text-muted-foreground">الصافي</span><span className="font-medium">{net.toFixed(2)}</span></div>
+          {taxAmount > 0 && (
+            <div className="flex justify-between"><span className="text-muted-foreground">الضريبة</span><span className="font-medium">{taxAmount.toFixed(2)}</span></div>
+          )}
+          {taxAmount > 0 && (
+            <div className="flex justify-between"><span className="text-muted-foreground">الإجمالي شامل الضريبة</span><span className="font-medium">{grand.toFixed(2)}</span></div>
+          )}
           <div className="flex justify-between"><span className="text-muted-foreground">المتبقي</span><span className={`font-bold ${due > 0 ? "text-destructive" : "text-success"}`}>{due.toFixed(2)}</span></div>
         </div>
       </div>

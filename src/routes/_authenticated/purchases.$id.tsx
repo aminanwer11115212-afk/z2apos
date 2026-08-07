@@ -75,88 +75,93 @@ function PurchaseView() {
         </div>
       </div>
 
-      <div className={`print-area bg-card border rounded-2xl p-6 shadow-sm ${isThermal ? "text-xs" : ""}`}>
-        <div className="flex items-start justify-between gap-4 pb-3 border-b">
-          <div className="flex items-center gap-3">
-            {settings.showLogo && <Logo variant="light" className={isThermal ? "h-10 w-auto" : "h-14 w-auto"} />}
-            <div>
-              <div className={`font-bold ${isThermal ? "text-sm" : "text-lg"}`}>{settings.storeName || "نظام 2A"}</div>
-              {settings.storePhone && <div className="text-xs muted-print text-muted-foreground">📞 {settings.storePhone}</div>}
-              {settings.storeAddress && <div className="text-xs muted-print text-muted-foreground hide-on-thermal">{settings.storeAddress}</div>}
+      {/* settings.printCopies: extra copies are screen-hidden and each starts a new sheet. */}
+      {Array.from({ length: Math.max(1, Number(settings.printCopies) || 1) }, (_, copy) => (
+        <div key={copy} className={copy > 0 ? "print-copy" : undefined}>
+        <div className={`print-area bg-card border rounded-2xl p-6 shadow-sm ${isThermal ? "text-xs" : ""}`}>
+          <div className="flex items-start justify-between gap-4 pb-3 border-b">
+            <div className="flex items-center gap-3">
+              {settings.showLogo && <Logo variant="light" className={isThermal ? "h-10 w-auto" : "h-14 w-auto"} />}
+              <div>
+                <div className={`font-bold ${isThermal ? "text-sm" : "text-lg"}`}>{settings.storeName || "نظام 2A"}</div>
+                {settings.storePhone && <div className="text-xs muted-print text-muted-foreground">📞 {settings.storePhone}</div>}
+                {settings.storeAddress && <div className="text-xs muted-print text-muted-foreground hide-on-thermal">{settings.storeAddress}</div>}
+              </div>
+            </div>
+            <div className="text-left">
+              <div className="text-xs muted-print text-muted-foreground">فاتورة شراء</div>
+              <div className={`font-bold font-mono ${isThermal ? "text-lg" : "text-2xl"}`}>#{data.invoice_no}</div>
+              <div className="text-xs muted-print text-muted-foreground mt-1">
+                {new Date(data.created_at).toLocaleString("ar-SD", { dateStyle: "medium", timeStyle: "short" })}
+              </div>
             </div>
           </div>
-          <div className="text-left">
-            <div className="text-xs muted-print text-muted-foreground">فاتورة شراء</div>
-            <div className={`font-bold font-mono ${isThermal ? "text-lg" : "text-2xl"}`}>#{data.invoice_no}</div>
-            <div className="text-xs muted-print text-muted-foreground mt-1">
-              {new Date(data.created_at).toLocaleString("ar-SD", { dateStyle: "medium", timeStyle: "short" })}
-            </div>
-          </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-3 py-3 text-sm">
-          <div>
-            <div className="muted-print text-muted-foreground text-xs">المورد</div>
-            <div className="font-semibold">{data.suppliers?.name ?? "—"}</div>
-            {data.suppliers?.phone && <div className="text-xs muted-print text-muted-foreground">{data.suppliers.phone}</div>}
+          <div className="grid grid-cols-2 gap-3 py-3 text-sm">
+            <div>
+              <div className="muted-print text-muted-foreground text-xs">المورد</div>
+              <div className="font-semibold">{data.suppliers?.name ?? "—"}</div>
+              {data.suppliers?.phone && <div className="text-xs muted-print text-muted-foreground">{data.suppliers.phone}</div>}
+            </div>
+            {data.account_name && (
+              <div>
+                <div className="muted-print text-muted-foreground text-xs">الحساب</div>
+                <div className="font-semibold">{data.account_name}</div>
+              </div>
+            )}
+            {data.payment_method && (
+              <div>
+                <div className="muted-print text-muted-foreground text-xs">طريقة الدفع</div>
+                <div className="font-semibold">{paymentMethodIcon(data.payment_method)} {paymentMethodLabel(data.payment_method)}</div>
+              </div>
+            )}
+            {data.notes && (
+              <div className="col-span-2 hide-on-thermal">
+                <div className="muted-print text-muted-foreground text-xs">ملاحظات</div>
+                <div>{data.notes}</div>
+              </div>
+            )}
           </div>
-          {data.account_name && (
-            <div>
-              <div className="muted-print text-muted-foreground text-xs">الحساب</div>
-              <div className="font-semibold">{data.account_name}</div>
-            </div>
-          )}
-          {data.payment_method && (
-            <div>
-              <div className="muted-print text-muted-foreground text-xs">طريقة الدفع</div>
-              <div className="font-semibold">{paymentMethodIcon(data.payment_method)} {paymentMethodLabel(data.payment_method)}</div>
-            </div>
-          )}
-          {data.notes && (
-            <div className="col-span-2 hide-on-thermal">
-              <div className="muted-print text-muted-foreground text-xs">ملاحظات</div>
-              <div>{data.notes}</div>
-            </div>
-          )}
-        </div>
 
-        <table className="w-full text-sm mt-2">
-          <thead className="border-y">
-            <tr className="text-xs muted-print text-muted-foreground">
-              <th className="text-right py-2">الصنف</th>
-              <th className="text-center py-2 w-16">كمية</th>
-              <th className="text-center py-2 w-24 hide-on-thermal">تكلفة</th>
-              <th className="text-left py-2 w-24">الإجمالي</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {data.purchase_items.map((it) => (
-              <tr key={it.id}>
-                <td className="py-2">
-                  <div className="font-medium">{it.parts?.name ?? "—"}</div>
-                  {it.parts?.code && <div className="text-xs muted-print text-muted-foreground font-mono">{it.parts.code}</div>}
-                </td>
-                <td className="py-2 text-center">{Number(it.qty)}</td>
-                <td className="py-2 text-center hide-on-thermal">{formatSDG(it.unit_cost)}</td>
-                <td className="py-2 text-left font-semibold">{formatSDG(it.subtotal)}</td>
+          <table className="w-full text-sm mt-2">
+            <thead className="border-y">
+              <tr className="text-xs muted-print text-muted-foreground">
+                <th className="text-right py-2">الصنف</th>
+                <th className="text-center py-2 w-16">كمية</th>
+                <th className="text-center py-2 w-24 hide-on-thermal">تكلفة</th>
+                <th className="text-left py-2 w-24">الإجمالي</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y">
+              {data.purchase_items.map((it) => (
+                <tr key={it.id}>
+                  <td className="py-2">
+                    <div className="font-medium">{it.parts?.name ?? "—"}</div>
+                    {it.parts?.code && <div className="text-xs muted-print text-muted-foreground font-mono">{it.parts.code}</div>}
+                  </td>
+                  <td className="py-2 text-center">{Number(it.qty)}</td>
+                  <td className="py-2 text-center hide-on-thermal">{formatSDG(it.unit_cost)}</td>
+                  <td className="py-2 text-left font-semibold">{formatSDG(it.subtotal)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
-        <div className="mt-4 flex justify-end">
-          <div className="w-full sm:w-72 text-sm space-y-1">
-            <Row label="الإجمالي" value={formatSDG(Number(data.total))} strong />
-            <Row label="المدفوع" value={formatSDG(Number(data.paid))} />
-            <Row label="المستحق" value={formatSDG(due)} strong />
+          <div className="mt-4 flex justify-end">
+            <div className="w-full sm:w-72 text-sm space-y-1">
+              <Row label="الإجمالي" value={formatSDG(Number(data.total))} strong />
+              <Row label="المدفوع" value={formatSDG(Number(data.paid))} />
+              <Row label="المستحق" value={formatSDG(due)} strong />
+            </div>
+          </div>
+
+          <div className="mt-6 pt-3 border-t text-center text-xs muted-print text-muted-foreground">
+            {settings.invoiceFooter || "شكراً لتعاملكم معنا"}
+            <div className="mt-1 hide-on-thermal">نظام 2A — من تطوير أمين أنور أحمد</div>
           </div>
         </div>
-
-        <div className="mt-6 pt-3 border-t text-center text-xs muted-print text-muted-foreground">
-          {settings.invoiceFooter || "شكراً لتعاملكم معنا"}
-          <div className="mt-1 hide-on-thermal">نظام 2A — من تطوير أمين أنور أحمد</div>
         </div>
-      </div>
+      ))}
 
       {data.suppliers && (
         <PaymentDialog open={payOpen} onClose={() => setPayOpen(false)}

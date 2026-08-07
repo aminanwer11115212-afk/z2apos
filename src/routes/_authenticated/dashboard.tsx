@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
+import { useSettings, isLowStock } from "@/lib/settings";
 import { Package, ShoppingCart, AlertTriangle, Users, TrendingUp, Wallet } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
@@ -10,12 +11,14 @@ export const Route = createFileRoute("/_authenticated/dashboard")({ head: () => 
 const AR_DAYS = ["أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
 
 function Dashboard() {
+  const settings = useSettings();
+  // Threshold participates in the key so changing it in settings refetches.
   const stats = useQuery({
-    queryKey: ["dashboard-stats"],
+    queryKey: ["dashboard-stats", settings.lowStockDefault],
     queryFn: async () => {
       const now = new Date(); const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()); const weekStart = new Date(today); weekStart.setDate(today.getDate() - 6); const iso = (d: Date) => d.toISOString();
       const [{ data: weekSales }, { data: parts }, { count: partsCount }, { count: custCount }, { data: lowStockList }] = await Promise.all([
-        supabase.from("sales").select("total,discount,paid,created_at").gte("created_at", iso(weekStart)),
+        supabase.from("sales").select("total,discount,tax_amount,paid,created_at").gte("created_at", iso(weekStart)),
         supabase.from("parts").select("id,quantity,min_quantity"),
         supabase.from("parts").select("*", { count: "exact", head: true }),
         supabase.from("customers").select("*", { count: "exact", head: true }),
@@ -23,11 +26,11 @@ function Dashboard() {
       ]);
       const todayIso = today.toISOString().slice(0, 10);
       const todaySalesArr = (weekSales ?? []).filter((r) => r.created_at.slice(0, 10) === todayIso);
-      const todaySales = todaySalesArr.reduce((s, r) => s + Number(r.total) - Number(r.discount), 0);
-      const lowStock = (parts ?? []).filter((p) => Number(p.quantity) <= Number(p.min_quantity)).length;
+      const todaySales = todaySalesArr.reduce((s, r) => s + Number(r.total) - Number(r.discount) + Number(r.tax_amount ?? 0), 0);
+      const lowStock = (parts ?? []).filter((p) => isLowStock(p, settings)).length;
       const days: { day: string; total: number }[] = [];
-      for (let i = 6; i >= 0; i--) { const d = new Date(today); d.setDate(today.getDate() - i); const key = d.toISOString().slice(0, 10); const total = (weekSales ?? []).filter((r) => r.created_at.slice(0, 10) === key).reduce((s, r) => s + Number(r.total) - Number(r.discount), 0); days.push({ day: AR_DAYS[d.getDay()], total: Math.round(total) }); }
-      const lowStockItems = (lowStockList ?? []).filter((p) => Number(p.quantity) <= Number(p.min_quantity)).slice(0, 6);
+      for (let i = 6; i >= 0; i--) { const d = new Date(today); d.setDate(today.getDate() - i); const key = d.toISOString().slice(0, 10); const total = (weekSales ?? []).filter((r) => r.created_at.slice(0, 10) === key).reduce((s, r) => s + Number(r.total) - Number(r.discount) + Number(r.tax_amount ?? 0), 0); days.push({ day: AR_DAYS[d.getDay()], total: Math.round(total) }); }
+      const lowStockItems = (lowStockList ?? []).filter((p) => isLowStock(p, settings)).slice(0, 6);
       return { todaySales, salesCount: todaySalesArr.length, partsCount: partsCount ?? 0, custCount: custCount ?? 0, lowStock, days, lowStockItems };
     },
   });

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMyRole, formatSDG } from "@/lib/auth";
+import { useSettings, isLowStock } from "@/lib/settings";
 import { Modal, Field, Input, Btn, PageHeader, SearchBar, EmptyState, useDialog } from "@/components/ui-kit";
 import { Plus, Pencil, Trash2, AlertTriangle, Barcode as BarcodeIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -25,8 +26,11 @@ function autoCode() {
 
 function PartsPage() {
   const qc = useQueryClient();
+  const settings = useSettings();
   const { data: role } = useMyRole();
   const isAdmin = role === "admin";
+  // Sellers see cost only when the admin grants it; admins always do.
+  const canSeeCost = isAdmin || settings.sellerPerms.seeCost;
   const [q, setQ] = useState("");
   const dialog = useDialog();
   const [editing, setEditing] = useState<Part | null>(null);
@@ -109,6 +113,7 @@ function PartsPage() {
                   <th className="text-right p-3 font-medium">الاسم</th>
                   <th className="text-right p-3 font-medium hidden sm:table-cell">الفئة</th>
                   <th className="text-right p-3 font-medium hidden md:table-cell">نوع السيارة</th>
+                  {canSeeCost && <th className="text-right p-3 font-medium hidden lg:table-cell">سعر التكلفة</th>}
                   <th className="text-right p-3 font-medium">سعر البيع</th>
                   <th className="text-right p-3 font-medium">الكمية</th>
                   {isAdmin && <th className="p-3"></th>}
@@ -116,12 +121,13 @@ function PartsPage() {
               </thead>
               <tbody>
                 {filtered.map((p) => {
-                  const low = Number(p.quantity) <= Number(p.min_quantity);
+                  const low = isLowStock(p, settings);
                   return (
                     <tr key={p.id} className="border-t hover:bg-muted/50">
                       <td className="p-3 font-medium">{p.name}</td>
                       <td className="p-3 hidden sm:table-cell text-muted-foreground">{p.category || "—"}</td>
                       <td className="p-3 hidden md:table-cell text-muted-foreground">{p.car_model || "—"}</td>
+                      {canSeeCost && <td className="p-3 hidden lg:table-cell text-muted-foreground">{formatSDG(p.cost_price)}</td>}
                       <td className="p-3">{formatSDG(p.sell_price)}</td>
                       <td className="p-3">
                         <span className={`inline-flex items-center gap-1 ${low ? "text-destructive font-bold" : ""}`}>

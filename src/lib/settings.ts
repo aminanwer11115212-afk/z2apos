@@ -135,8 +135,47 @@ export function computeTax(net: number, s: Settings) {
   return { amount, grand: net + amount };
 }
 
+/** Row shape shared by every saved-sale total calculation. */
+export type SaleTotals = {
+  total: number | string;
+  discount?: number | string | null;
+  tax_amount?: number | string | null;
+};
+
+/**
+ * Totals of a *saved* sale. Always reads `tax_amount` as stored on the invoice
+ * instead of recomputing from current settings: the balance trigger uses the
+ * stored value, and changing the tax rate must not rewrite historical invoices.
+ */
+export function saleTotals(s: SaleTotals) {
+  const net = Number(s.total) - Number(s.discount ?? 0);
+  const tax = Number(s.tax_amount ?? 0);
+  return { net, tax, grand: net + tax };
+}
+
+/** Outstanding amount on a saved sale — mirrors apply_sale_balance exactly. */
+export function saleDue(s: SaleTotals & { paid: number | string }) {
+  return saleTotals(s).grand - Number(s.paid);
+}
+
 export function formatInvoiceNo(n: number | string, s: Settings) {
   return `${s.invoicePrefix || ""}${n}`;
+}
+
+/**
+ * Alert threshold for a part: its own `min_quantity`, falling back to the
+ * store-wide default when the part has none set.
+ */
+export function lowStockThreshold(minQuantity: number | string | null | undefined, s: Settings) {
+  const own = Number(minQuantity ?? 0);
+  return own > 0 ? own : s.lowStockDefault;
+}
+
+export function isLowStock(
+  p: { quantity: number | string; min_quantity?: number | string | null },
+  s: Settings,
+) {
+  return Number(p.quantity) <= lowStockThreshold(p.min_quantity, s);
 }
 
 export function renderTemplate(tpl: string, vars: Record<string, string>): string {

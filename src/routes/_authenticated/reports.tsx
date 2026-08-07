@@ -72,7 +72,7 @@ function Reports() {
       const start = new Date(range.from + "T00:00:00").toISOString();
       const end = new Date(range.to + "T23:59:59").toISOString();
 
-      let salesQ = supabase.from("sales").select("id,total,discount,paid,payment_method,created_at,created_by,customer_id").gte("created_at", start).lte("created_at", end);
+      let salesQ = supabase.from("sales").select("id,total,discount,tax_amount,paid,payment_method,created_at,created_by,customer_id").gte("created_at", start).lte("created_at", end);
       if (sellerId) salesQ = salesQ.eq("created_by", sellerId);
       if (customerId) salesQ = salesQ.eq("customer_id", customerId);
       const { data: sales } = await salesQ;
@@ -133,7 +133,9 @@ function Reports() {
         if (initial > 0) addToMethod((pu as { payment_method?: string | null }).payment_method ?? "cash", "out", initial);
       }
 
+      // صافي المبيعات بلا ضريبة (أساس الربح)، والمحصّل يقابل الإجمالي شامل الضريبة
       const salesNet = (sales ?? []).reduce((s, r) => s + Number(r.total) - Number(r.discount), 0);
+      const salesTax = (sales ?? []).reduce((s, r) => s + Number(r.tax_amount ?? 0), 0);
       const salesCollected = (sales ?? []).reduce((s, r) => s + Number(r.paid), 0);
       const purchasesTotal = (purchases ?? []).reduce((s, r) => s + Number(r.total), 0);
       const purchasesPaid = (purchases ?? []).reduce((s, r) => s + Number(r.paid), 0);
@@ -145,6 +147,7 @@ function Reports() {
         salesCount: sales?.length ?? 0, salesNet, salesCollected,
         purchasesCount: purchases?.length ?? 0, purchasesTotal, purchasesPaid,
         stockValueCost, stockValueSell, stockCount: parts?.length ?? 0, lowStock,
+        salesTax, salesGross: salesNet + salesTax,
         cogs, profit: salesNet - cogs, topProducts, methodMap,
       };
     },
@@ -158,8 +161,10 @@ function Reports() {
       ["ملخص المبيعات"],
       ["عدد الفواتير", data.salesCount],
       ["إجمالي (صافي)", data.salesNet],
+      ["الضريبة", data.salesTax],
+      ["الإجمالي شامل الضريبة", data.salesGross],
       ["المحصّل", data.salesCollected],
-      ["المتبقي", data.salesNet - data.salesCollected],
+      ["المتبقي", data.salesGross - data.salesCollected],
       ["تكلفة المبيعات", data.cogs],
       ["إجمالي الربح", data.profit],
       [],
@@ -195,8 +200,10 @@ function Reports() {
       ["ملخص المبيعات"],
       ["عدد الفواتير", data.salesCount],
       ["الصافي", data.salesNet],
+      ["الضريبة", data.salesTax],
+      ["الإجمالي شامل الضريبة", data.salesGross],
       ["المحصّل", data.salesCollected],
-      ["المتبقي", data.salesNet - data.salesCollected],
+      ["المتبقي", data.salesGross - data.salesCollected],
       ["تكلفة المبيعات", data.cogs],
       ["إجمالي الربح", data.profit],
       [],
@@ -296,8 +303,10 @@ function Reports() {
         <Section title="المبيعات">
           <Stat label="عدد الفواتير" value={String(data?.salesCount ?? 0)} />
           <Stat label="الصافي" value={formatSDG(data?.salesNet ?? 0)} />
+          {!!data?.salesTax && <Stat label="الضريبة" value={formatSDG(data.salesTax)} />}
+          {!!data?.salesTax && <Stat label="الإجمالي شامل الضريبة" value={formatSDG(data.salesGross)} />}
           <Stat label="المحصّل" value={formatSDG(data?.salesCollected ?? 0)} />
-          <Stat label="المتبقي" value={formatSDG((data?.salesNet ?? 0) - (data?.salesCollected ?? 0))} highlight />
+          <Stat label="المتبقي" value={formatSDG((data?.salesGross ?? 0) - (data?.salesCollected ?? 0))} highlight />
         </Section>
 
         <Section title="الربحية">

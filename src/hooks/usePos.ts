@@ -91,7 +91,9 @@ export function usePos() {
       const acc = isDigital ? digitalAccounts.find((a) => a.id === bankAccountId) : cashAccount;
       const ref = isDigital ? txRef.trim() : "";
       const finalNotes = acc ? encodeNotes(acc.name, notes, ref) : notes;
-      const { data: sale, error: e1 } = await supabase.from("sales").insert({ customer_id: customerId || null, discount: effectiveDiscount, paid, notes: finalNotes || null, created_by: uid, payment_method: paymentMethod, account_name: acc?.name ?? null }).select("id, invoice_no").single(); if (e1) throw e1;
+      // Persist the tax with the invoice: the balance trigger adds it to the amount
+      // due, and storing it keeps old invoices intact if the rate changes later.
+      const { data: sale, error: e1 } = await supabase.from("sales").insert({ customer_id: customerId || null, discount: effectiveDiscount, tax_amount: tax.amount, paid, notes: finalNotes || null, created_by: uid, payment_method: paymentMethod, account_name: acc?.name ?? null }).select("id, invoice_no").single(); if (e1) throw e1;
       const items = lines.map((l) => ({ sale_id: sale.id, part_id: l.part.id, qty: l.qty, unit_price: l.unit_price })); const { error: e2 } = await supabase.from("sale_items").insert(items); if (e2) throw e2;
       return sale;
     },

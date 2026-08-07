@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
+import { saleTotals } from "@/lib/settings";
 import { PageHeader, EmptyState, Btn } from "@/components/ui-kit";
 import { Plus } from "lucide-react";
 
@@ -11,7 +12,7 @@ export const Route = createFileRoute("/_authenticated/sales/")({
 });
 
 type Sale = {
-  id: string; invoice_no: number; total: number; discount: number; paid: number;
+  id: string; invoice_no: number; total: number; discount: number; tax_amount: number; paid: number;
   created_at: string; notes: string | null;
   customers: { name: string } | null;
 };
@@ -22,7 +23,7 @@ function SalesList() {
     queryKey: ["sales-list"],
     queryFn: async () => {
       const { data, error } = await supabase.from("sales")
-        .select("id,invoice_no,total,discount,paid,created_at,notes, customers(name)")
+        .select("id,invoice_no,total,discount,tax_amount,paid,created_at,notes, customers(name)")
         .order("created_at", { ascending: false }).limit(200);
       if (error) throw error;
       return data as unknown as Sale[];
@@ -48,8 +49,8 @@ function SalesList() {
             </thead>
             <tbody>
               {data.map((s) => {
-                const net = Number(s.total) - Number(s.discount);
-                const due = net - Number(s.paid);
+                const { grand } = saleTotals(s);
+                const due = grand - Number(s.paid);
                 return (
                   <tr key={s.id} className="border-t hover:bg-muted/50 cursor-pointer" onClick={(e) => {
                     // The invoice-number cell is a real link; let it handle its own click.
@@ -63,7 +64,7 @@ function SalesList() {
                       {new Date(s.created_at).toLocaleString("ar-SD", { dateStyle: "short", timeStyle: "short" })}
                     </td>
                     <td className="p-3">{s.customers?.name ?? <span className="text-muted-foreground">نقدي</span>}</td>
-                    <td className="p-3 font-semibold">{formatSDG(net)}</td>
+                    <td className="p-3 font-semibold">{formatSDG(grand)}</td>
                     <td className={`p-3 font-semibold ${due > 0 ? "text-destructive" : "text-success"}`}>{formatSDG(due)}</td>
                   </tr>
                 );
