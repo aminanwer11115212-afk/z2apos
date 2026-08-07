@@ -1,576 +1,689 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5";
-  };
+    PostgrestVersion: "14.5"
+  }
   public: {
     Tables: {
+      account_transactions: {
+        Row: {
+          account_id: string
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          reference: string | null
+          related_id: string | null
+          related_table: string | null
+          type: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          reference?: string | null
+          related_id?: string | null
+          related_table?: string | null
+          type: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          reference?: string | null
+          related_id?: string | null
+          related_table?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounts: {
+        Row: {
+          balance: number
+          code: string | null
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          type: string
+        }
+        Insert: {
+          balance?: number
+          code?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          type: string
+        }
+        Update: {
+          balance?: number
+          code?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          type?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
-          address: string | null;
-          balance: number;
-          created_at: string;
-          id: string;
-          name: string;
-          phone: string | null;
-          updated_at: string;
-        };
+          address: string | null
+          balance: number
+          created_at: string
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string
+        }
         Insert: {
-          address?: string | null;
-          balance?: number;
-          created_at?: string;
-          id?: string;
-          name: string;
-          phone?: string | null;
-          updated_at?: string;
-        };
+          address?: string | null
+          balance?: number
+          created_at?: string
+          id?: string
+          name: string
+          phone?: string | null
+          updated_at?: string
+        }
         Update: {
-          address?: string | null;
-          balance?: number;
-          created_at?: string;
-          id?: string;
-          name?: string;
-          phone?: string | null;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
+          address?: string | null
+          balance?: number
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       parts: {
         Row: {
-          car_model: string | null;
-          category: string | null;
-          code: string;
-          cost_price: number;
-          created_at: string;
-          id: string;
-          min_quantity: number;
-          name: string;
-          notes: string | null;
-          quantity: number;
-          sell_price: number;
-          updated_at: string;
-        };
+          car_model: string | null
+          category: string | null
+          code: string
+          cost_price: number
+          created_at: string
+          id: string
+          min_quantity: number
+          name: string
+          notes: string | null
+          quantity: number
+          sell_price: number
+          updated_at: string
+        }
         Insert: {
-          car_model?: string | null;
-          category?: string | null;
-          code: string;
-          cost_price?: number;
-          created_at?: string;
-          id?: string;
-          min_quantity?: number;
-          name: string;
-          notes?: string | null;
-          quantity?: number;
-          sell_price?: number;
-          updated_at?: string;
-        };
+          car_model?: string | null
+          category?: string | null
+          code: string
+          cost_price?: number
+          created_at?: string
+          id?: string
+          min_quantity?: number
+          name: string
+          notes?: string | null
+          quantity?: number
+          sell_price?: number
+          updated_at?: string
+        }
         Update: {
-          car_model?: string | null;
-          category?: string | null;
-          code?: string;
-          cost_price?: number;
-          created_at?: string;
-          id?: string;
-          min_quantity?: number;
-          name?: string;
-          notes?: string | null;
-          quantity?: number;
-          sell_price?: number;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
+          car_model?: string | null
+          category?: string | null
+          code?: string
+          cost_price?: number
+          created_at?: string
+          id?: string
+          min_quantity?: number
+          name?: string
+          notes?: string | null
+          quantity?: number
+          sell_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
-          account_name: string | null;
-          amount: number;
-          created_at: string;
-          created_by: string | null;
-          customer_id: string | null;
-          direction: string;
-          id: string;
-          method: string;
-          notes: string | null;
-          purchase_id: string | null;
-          sale_id: string | null;
-          supplier_id: string | null;
-          updated_at: string;
-        };
+          account_name: string | null
+          amount: number
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          direction: string
+          id: string
+          method: string
+          notes: string | null
+          purchase_id: string | null
+          sale_id: string | null
+          supplier_id: string | null
+          updated_at: string
+        }
         Insert: {
-          account_name?: string | null;
-          amount: number;
-          created_at?: string;
-          created_by?: string | null;
-          customer_id?: string | null;
-          direction: string;
-          id?: string;
-          method?: string;
-          notes?: string | null;
-          purchase_id?: string | null;
-          sale_id?: string | null;
-          supplier_id?: string | null;
-          updated_at?: string;
-        };
+          account_name?: string | null
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          direction: string
+          id?: string
+          method?: string
+          notes?: string | null
+          purchase_id?: string | null
+          sale_id?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+        }
         Update: {
-          account_name?: string | null;
-          amount?: number;
-          created_at?: string;
-          created_by?: string | null;
-          customer_id?: string | null;
-          direction?: string;
-          id?: string;
-          method?: string;
-          notes?: string | null;
-          purchase_id?: string | null;
-          sale_id?: string | null;
-          supplier_id?: string | null;
-          updated_at?: string;
-        };
+          account_name?: string | null
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          direction?: string
+          id?: string
+          method?: string
+          notes?: string | null
+          purchase_id?: string | null
+          sale_id?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "payments_customer_id_fkey";
-            columns: ["customer_id"];
-            isOneToOne: false;
-            referencedRelation: "customers";
-            referencedColumns: ["id"];
+            foreignKeyName: "payments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "payments_purchase_id_fkey";
-            columns: ["purchase_id"];
-            isOneToOne: false;
-            referencedRelation: "purchases";
-            referencedColumns: ["id"];
+            foreignKeyName: "payments_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "payments_sale_id_fkey";
-            columns: ["sale_id"];
-            isOneToOne: false;
-            referencedRelation: "sales";
-            referencedColumns: ["id"];
+            foreignKeyName: "payments_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "payments_supplier_id_fkey";
-            columns: ["supplier_id"];
-            isOneToOne: false;
-            referencedRelation: "suppliers";
-            referencedColumns: ["id"];
+            foreignKeyName: "payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
       profiles: {
         Row: {
-          created_at: string;
-          full_name: string;
-          id: string;
-          updated_at: string;
-          user_id: string;
-        };
+          created_at: string
+          full_name: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
         Insert: {
-          created_at?: string;
-          full_name?: string;
-          id?: string;
-          updated_at?: string;
-          user_id: string;
-        };
+          created_at?: string
+          full_name?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
         Update: {
-          created_at?: string;
-          full_name?: string;
-          id?: string;
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
+          created_at?: string
+          full_name?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       purchase_items: {
         Row: {
-          created_at: string;
-          id: string;
-          part_id: string;
-          purchase_id: string;
-          qty: number;
-          subtotal: number | null;
-          unit_cost: number;
-        };
+          created_at: string
+          id: string
+          part_id: string
+          purchase_id: string
+          qty: number
+          subtotal: number | null
+          unit_cost: number
+        }
         Insert: {
-          created_at?: string;
-          id?: string;
-          part_id: string;
-          purchase_id: string;
-          qty: number;
-          subtotal?: number | null;
-          unit_cost?: number;
-        };
+          created_at?: string
+          id?: string
+          part_id: string
+          purchase_id: string
+          qty: number
+          subtotal?: number | null
+          unit_cost?: number
+        }
         Update: {
-          created_at?: string;
-          id?: string;
-          part_id?: string;
-          purchase_id?: string;
-          qty?: number;
-          subtotal?: number | null;
-          unit_cost?: number;
-        };
+          created_at?: string
+          id?: string
+          part_id?: string
+          purchase_id?: string
+          qty?: number
+          subtotal?: number | null
+          unit_cost?: number
+        }
         Relationships: [
           {
-            foreignKeyName: "purchase_items_part_id_fkey";
-            columns: ["part_id"];
-            isOneToOne: false;
-            referencedRelation: "parts";
-            referencedColumns: ["id"];
+            foreignKeyName: "purchase_items_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "purchase_items_purchase_id_fkey";
-            columns: ["purchase_id"];
-            isOneToOne: false;
-            referencedRelation: "purchases";
-            referencedColumns: ["id"];
+            foreignKeyName: "purchase_items_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
       purchases: {
         Row: {
-          account_name: string | null;
-          created_at: string;
-          created_by: string | null;
-          id: string;
-          invoice_no: number;
-          notes: string | null;
-          paid: number;
-          payment_method: string;
-          supplier_id: string | null;
-          total: number;
-          updated_at: string;
-        };
+          account_name: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          invoice_no: number
+          notes: string | null
+          paid: number
+          payment_method: string
+          supplier_id: string | null
+          total: number
+          updated_at: string
+        }
         Insert: {
-          account_name?: string | null;
-          created_at?: string;
-          created_by?: string | null;
-          id?: string;
-          invoice_no?: number;
-          notes?: string | null;
-          paid?: number;
-          payment_method?: string;
-          supplier_id?: string | null;
-          total?: number;
-          updated_at?: string;
-        };
+          account_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invoice_no?: number
+          notes?: string | null
+          paid?: number
+          payment_method?: string
+          supplier_id?: string | null
+          total?: number
+          updated_at?: string
+        }
         Update: {
-          account_name?: string | null;
-          created_at?: string;
-          created_by?: string | null;
-          id?: string;
-          invoice_no?: number;
-          notes?: string | null;
-          paid?: number;
-          payment_method?: string;
-          supplier_id?: string | null;
-          total?: number;
-          updated_at?: string;
-        };
+          account_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invoice_no?: number
+          notes?: string | null
+          paid?: number
+          payment_method?: string
+          supplier_id?: string | null
+          total?: number
+          updated_at?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "purchases_supplier_id_fkey";
-            columns: ["supplier_id"];
-            isOneToOne: false;
-            referencedRelation: "suppliers";
-            referencedColumns: ["id"];
+            foreignKeyName: "purchases_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
       sale_items: {
         Row: {
-          created_at: string;
-          id: string;
-          part_id: string;
-          qty: number;
-          sale_id: string;
-          subtotal: number | null;
-          unit_price: number;
-        };
+          created_at: string
+          id: string
+          part_id: string
+          qty: number
+          sale_id: string
+          subtotal: number | null
+          unit_price: number
+        }
         Insert: {
-          created_at?: string;
-          id?: string;
-          part_id: string;
-          qty: number;
-          sale_id: string;
-          subtotal?: number | null;
-          unit_price?: number;
-        };
+          created_at?: string
+          id?: string
+          part_id: string
+          qty: number
+          sale_id: string
+          subtotal?: number | null
+          unit_price?: number
+        }
         Update: {
-          created_at?: string;
-          id?: string;
-          part_id?: string;
-          qty?: number;
-          sale_id?: string;
-          subtotal?: number | null;
-          unit_price?: number;
-        };
+          created_at?: string
+          id?: string
+          part_id?: string
+          qty?: number
+          sale_id?: string
+          subtotal?: number | null
+          unit_price?: number
+        }
         Relationships: [
           {
-            foreignKeyName: "sale_items_part_id_fkey";
-            columns: ["part_id"];
-            isOneToOne: false;
-            referencedRelation: "parts";
-            referencedColumns: ["id"];
+            foreignKeyName: "sale_items_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "sale_items_sale_id_fkey";
-            columns: ["sale_id"];
-            isOneToOne: false;
-            referencedRelation: "sales";
-            referencedColumns: ["id"];
+            foreignKeyName: "sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
       sales: {
         Row: {
-          account_name: string | null;
-          created_at: string;
-          created_by: string;
-          customer_id: string | null;
-          discount: number;
-          id: string;
-          invoice_no: number;
-          notes: string | null;
-          paid: number;
-          payment_method: string;
-          tax_amount: number;
-          total: number;
-          updated_at: string;
-        };
+          account_name: string | null
+          created_at: string
+          created_by: string
+          customer_id: string | null
+          discount: number
+          id: string
+          invoice_no: number
+          notes: string | null
+          paid: number
+          payment_method: string
+          total: number
+          updated_at: string
+        }
         Insert: {
-          account_name?: string | null;
-          created_at?: string;
-          created_by: string;
-          customer_id?: string | null;
-          discount?: number;
-          id?: string;
-          invoice_no?: number;
-          notes?: string | null;
-          paid?: number;
-          payment_method?: string;
-          tax_amount?: number;
-          total?: number;
-          updated_at?: string;
-        };
+          account_name?: string | null
+          created_at?: string
+          created_by: string
+          customer_id?: string | null
+          discount?: number
+          id?: string
+          invoice_no?: number
+          notes?: string | null
+          paid?: number
+          payment_method?: string
+          total?: number
+          updated_at?: string
+        }
         Update: {
-          account_name?: string | null;
-          created_at?: string;
-          created_by?: string;
-          customer_id?: string | null;
-          discount?: number;
-          id?: string;
-          invoice_no?: number;
-          notes?: string | null;
-          paid?: number;
-          payment_method?: string;
-          tax_amount?: number;
-          total?: number;
-          updated_at?: string;
-        };
+          account_name?: string | null
+          created_at?: string
+          created_by?: string
+          customer_id?: string | null
+          discount?: number
+          id?: string
+          invoice_no?: number
+          notes?: string | null
+          paid?: number
+          payment_method?: string
+          total?: number
+          updated_at?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "sales_customer_id_fkey";
-            columns: ["customer_id"];
-            isOneToOne: false;
-            referencedRelation: "customers";
-            referencedColumns: ["id"];
+            foreignKeyName: "sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
       suppliers: {
         Row: {
-          address: string | null;
-          balance: number;
-          created_at: string;
-          id: string;
-          name: string;
-          phone: string | null;
-          updated_at: string;
-        };
+          address: string | null
+          balance: number
+          created_at: string
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string
+        }
         Insert: {
-          address?: string | null;
-          balance?: number;
-          created_at?: string;
-          id?: string;
-          name: string;
-          phone?: string | null;
-          updated_at?: string;
-        };
+          address?: string | null
+          balance?: number
+          created_at?: string
+          id?: string
+          name: string
+          phone?: string | null
+          updated_at?: string
+        }
         Update: {
-          address?: string | null;
-          balance?: number;
-          created_at?: string;
-          id?: string;
-          name?: string;
-          phone?: string | null;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
+          address?: string | null
+          balance?: number
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
-          created_at: string;
-          id: string;
-          role: Database["public"]["Enums"]["app_role"];
-          user_id: string;
-        };
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
         Insert: {
-          created_at?: string;
-          id?: string;
-          role: Database["public"]["Enums"]["app_role"];
-          user_id: string;
-        };
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
         Update: {
-          created_at?: string;
-          id?: string;
-          role?: Database["public"]["Enums"]["app_role"];
-          user_id?: string;
-        };
-        Relationships: [];
-      };
-    };
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+    }
     Views: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     Functions: {
       bootstrap_first_admin: {
-        Args: never;
-        Returns: Database["public"]["Enums"]["app_role"];
-      };
+        Args: never
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
       has_role: {
         Args: {
-          _role: Database["public"]["Enums"]["app_role"];
-          _user_id: string;
-        };
-        Returns: boolean;
-      };
-    };
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      record_account_transaction: {
+        Args: {
+          p_account_id: string
+          p_amount: number
+          p_created_by?: string
+          p_notes?: string
+          p_reference?: string
+          p_related_id?: string
+          p_related_table?: string
+          p_type: string
+        }
+        Returns: string
+      }
+      resolve_account: {
+        Args: { account_name: string; method: string }
+        Returns: string
+      }
+      transfer_between_accounts: {
+        Args: {
+          p_amount: number
+          p_created_by?: string
+          p_from_account_id: string
+          p_notes?: string
+          p_reference?: string
+          p_to_account_id: string
+        }
+        Returns: {
+          in_id: string
+          out_id: string
+        }[]
+      }
+    }
     Enums: {
-      app_role: "admin" | "seller";
-    };
+      app_role: "admin" | "seller"
+    }
     CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
-};
+      [_ in never]: never
+    }
+  }
+}
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">];
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R;
+      Row: infer R
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R;
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
       }
       ? R
       : never
-    : never;
+    : never
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I;
+      Insert: infer I
     }
     ? I
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I;
+        Insert: infer I
       }
       ? I
       : never
-    : never;
+    : never
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U;
+      Update: infer U
     }
     ? U
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U;
+        Update: infer U
       }
       ? U
       : never
-    : never;
+    : never
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never;
+    : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never;
+    : never
 
 export const Constants = {
   public: {
@@ -578,4 +691,4 @@ export const Constants = {
       app_role: ["admin", "seller"],
     },
   },
-} as const;
+} as const
