@@ -1,6 +1,12 @@
 import { type PaymentMethod } from "@/lib/payments";
 
-export type PosPart = { id: string; code: string; name: string; sell_price: number; quantity: number };
+export type PosPart = {
+  id: string;
+  code: string;
+  name: string;
+  sell_price: number;
+  quantity: number;
+};
 export type PosLine = { part: PosPart; qty: number; unit_price: number };
 
 export type HeldSale = {
@@ -19,7 +25,11 @@ export type HeldSale = {
 export const HOLD_KEY = "2a-held-sales";
 
 export const loadHeld = (): HeldSale[] => {
-  try { return JSON.parse(localStorage.getItem(HOLD_KEY) || "[]"); } catch { return []; }
+  try {
+    return JSON.parse(localStorage.getItem(HOLD_KEY) || "[]");
+  } catch {
+    return [];
+  }
 };
 
 export const saveHeld = (list: HeldSale[]) => {
@@ -27,4 +37,8 @@ export const saveHeld = (list: HeldSale[]) => {
 };
 
 export const formatSDG = (n: number) =>
-  new Intl.NumberFormat("ar-SD", { style: "currency", currency: "SDG", maximumFractionDigits: 2 }).format(n);
+  new Intl.NumberFormat("ar-SD", {
+    style: "currency",
+    currency: "SDG",
+    maximumFractionDigits: 2,
+  }).format(n);

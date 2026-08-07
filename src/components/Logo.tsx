@@ -1,6 +1,12 @@
 import { getSettings } from "@/lib/settings";
 
-export function Logo({ className = "h-9 w-auto", variant }: { className?: string; variant?: "dark" | "light" }) {
+export function Logo({
+  className = "h-9 w-auto",
+  variant,
+}: {
+  className?: string;
+  variant?: "dark" | "light";
+}) {
   // Custom uploaded logo overrides both variants when set.
   const custom = getSettings().customLogoUrl;
   if (custom) return <img src={custom} alt="Logo" className={className} />;

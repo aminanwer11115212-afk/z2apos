@@ -77,8 +77,10 @@ const DEFAULTS: Settings = {
     wallet: { enabled: true, defaultAccountId: "okash", requireRef: false },
   },
   defaultMethod: "cash",
-  waInvoiceTemplate: "السلام عليكم {name}،\nفاتورتك رقم {invoice} بمبلغ {total} — المتبقي {due}.\nشكراً لتعاملك مع {store}.",
-  waReminderTemplate: "السلام عليكم {name}،\nتذكير: عليك مبلغ متبقٍ قدره {balance}.\nنرجو السداد في أقرب فرصة.\n{store}",
+  waInvoiceTemplate:
+    "السلام عليكم {name}،\nفاتورتك رقم {invoice} بمبلغ {total} — المتبقي {due}.\nشكراً لتعاملك مع {store}.",
+  waReminderTemplate:
+    "السلام عليكم {name}،\nتذكير: عليك مبلغ متبقٍ قدره {balance}.\nنرجو السداد في أقرب فرصة.\n{store}",
   sellerPerms: {
     seeCost: false,
     editPrice: true,
@@ -110,20 +112,31 @@ function load(): Settings {
       },
       defaultMethod: parsed.defaultMethod ?? DEFAULTS.defaultMethod,
     };
-  } catch { return DEFAULTS; }
+  } catch {
+    return DEFAULTS;
+  }
 }
 
-export function getSettings(): Settings { return cache; }
+export function getSettings(): Settings {
+  return cache;
+}
 
 export function saveSettings(patch: Partial<Settings>) {
   cache = { ...cache, ...patch };
-  try { localStorage.setItem(KEY, JSON.stringify(cache)); } catch { /* noop */ }
+  try {
+    localStorage.setItem(KEY, JSON.stringify(cache));
+  } catch {
+    /* noop */
+  }
   listeners.forEach((l) => l());
 }
 
 export function useSettings(): Settings {
   return useSyncExternalStore(
-    (cb) => { listeners.add(cb); return () => listeners.delete(cb); },
+    (cb) => {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
     () => cache,
     () => DEFAULTS,
   );
@@ -190,7 +203,11 @@ export function encodeNotes(accountName: string, notes: string, ref?: string): s
   const accPart = `[حساب:${accountName}]`;
   return [accPart, refPart, clean].filter(Boolean).join(" ");
 }
-export function parseNotes(notes: string | null | undefined): { account: string | null; ref: string | null; text: string } {
+export function parseNotes(notes: string | null | undefined): {
+  account: string | null;
+  ref: string | null;
+  text: string;
+} {
   if (!notes) return { account: null, ref: null, text: "" };
   const acc = notes.match(ACC_RE)?.[1]?.trim() ?? null;
   const ref = notes.match(REF_RE)?.[1]?.trim() ?? null;

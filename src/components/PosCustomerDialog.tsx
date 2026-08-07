@@ -12,9 +12,11 @@ export function usePosCustomerDialog(onCreated: (id: string) => void) {
   const save = useMutation({
     mutationFn: async () => {
       if (!form.name.trim()) throw new Error("الاسم مطلوب");
-      const { data, error } = await supabase.from("customers")
+      const { data, error } = await supabase
+        .from("customers")
         .insert({ name: form.name.trim(), phone: form.phone.trim() || null })
-        .select("id").single();
+        .select("id")
+        .single();
       if (error) throw error;
       return data.id as string;
     },
@@ -33,7 +35,8 @@ export function usePosCustomerDialog(onCreated: (id: string) => void) {
     open: dialog.show,
     close: dialog.hide,
     isOpen: dialog.open,
-    form, setForm,
+    form,
+    setForm,
     save,
   };
 }
@@ -52,14 +55,37 @@ export function PosCustomerDialog({
   save: { mutate: () => void; isPending: boolean };
 }) {
   return (
-    <Modal open={isOpen} onClose={onClose} title="عميل جديد"
-      footer={<>
-        <Btn variant="outline" onClick={onClose}>إلغاء</Btn>
-        <Btn onClick={() => save.mutate()} disabled={save.isPending || !form.name.trim()}>حفظ</Btn>
-      </>}>
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title="عميل جديد"
+      footer={
+        <>
+          <Btn variant="outline" onClick={onClose}>
+            إلغاء
+          </Btn>
+          <Btn onClick={() => save.mutate()} disabled={save.isPending || !form.name.trim()}>
+            حفظ
+          </Btn>
+        </>
+      }
+    >
       <div className="space-y-3">
-        <Field label="الاسم *"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoFocus /></Field>
-        <Field label="الهاتف"><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} dir="ltr" className="text-right" /></Field>
+        <Field label="الاسم *">
+          <Input
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            autoFocus
+          />
+        </Field>
+        <Field label="الهاتف">
+          <Input
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            dir="ltr"
+            className="text-right"
+          />
+        </Field>
       </div>
     </Modal>
   );

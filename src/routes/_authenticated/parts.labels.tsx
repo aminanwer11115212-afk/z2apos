@@ -33,7 +33,9 @@ function LabelsPage() {
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return parts.slice(0, 50);
-    return parts.filter((p) => p.code.toLowerCase().includes(s) || p.name.toLowerCase().includes(s)).slice(0, 50);
+    return parts
+      .filter((p) => p.code.toLowerCase().includes(s) || p.name.toLowerCase().includes(s))
+      .slice(0, 50);
   }, [parts, q]);
 
   const set = (id: string, n: number) => setCounts((c) => ({ ...c, [id]: Math.max(0, n) }));
@@ -52,42 +54,86 @@ function LabelsPage() {
   return (
     <div className="p-4 lg:p-6 max-w-6xl mx-auto">
       <div className="no-print">
-        <PageHeader title="طباعة ملصقات باركود" subtitle={`${total} ملصق`}
-          actions={<Btn onClick={() => window.print()} disabled={total === 0}>
-            <Printer className="w-4 h-4 inline ml-1" />طباعة
-          </Btn>} />
-        <Link to="/parts" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-3">
-          <ArrowRight className="w-4 h-4" />العودة للقطع
+        <PageHeader
+          title="طباعة ملصقات باركود"
+          subtitle={`${total} ملصق`}
+          actions={
+            <Btn onClick={() => window.print()} disabled={total === 0}>
+              <Printer className="w-4 h-4 inline ml-1" />
+              طباعة
+            </Btn>
+          }
+        />
+        <Link
+          to="/parts"
+          className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-3"
+        >
+          <ArrowRight className="w-4 h-4" />
+          العودة للقطع
         </Link>
 
         <div className="bg-card border rounded-2xl p-4 mb-4 space-y-3">
           <SearchBar value={q} onChange={setQ} placeholder="بحث بالكود أو الاسم..." />
           <div className="flex flex-wrap gap-4 text-sm">
-            <label className="flex items-center gap-2"><input type="checkbox" checked={showName} onChange={(e) => setShowName(e.target.checked)} />إظهار الاسم</label>
-            <label className="flex items-center gap-2"><input type="checkbox" checked={showPrice} onChange={(e) => setShowPrice(e.target.checked)} />إظهار السعر</label>
-            <Btn variant="outline" onClick={() => setCounts({})}>تفريغ</Btn>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={showName}
+                onChange={(e) => setShowName(e.target.checked)}
+              />
+              إظهار الاسم
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={showPrice}
+                onChange={(e) => setShowPrice(e.target.checked)}
+              />
+              إظهار السعر
+            </label>
+            <Btn variant="outline" onClick={() => setCounts({})}>
+              تفريغ
+            </Btn>
           </div>
 
           <div className="max-h-72 overflow-auto border rounded-lg divide-y">
             {filtered.length === 0 ? (
               <div className="p-6 text-center text-muted-foreground text-sm">لا توجد نتائج</div>
-            ) : filtered.map((p) => {
-              const n = counts[p.id] ?? 0;
-              return (
-                <div key={p.id} className="flex items-center gap-3 p-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">{p.name}</div>
-                    <div className="text-xs text-muted-foreground font-mono">{p.code} · {formatSDG(p.sell_price)}</div>
+            ) : (
+              filtered.map((p) => {
+                const n = counts[p.id] ?? 0;
+                return (
+                  <div key={p.id} className="flex items-center gap-3 p-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{p.name}</div>
+                      <div className="text-xs text-muted-foreground font-mono">
+                        {p.code} · {formatSDG(p.sell_price)}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => set(p.id, n - 1)}
+                        className="w-8 h-8 rounded border hover:bg-muted"
+                      >
+                        <Minus className="w-3 h-3 mx-auto" />
+                      </button>
+                      <input
+                        type="number"
+                        value={n}
+                        onChange={(e) => set(p.id, Number(e.target.value) || 0)}
+                        className="w-14 h-8 text-center rounded border bg-background text-sm"
+                      />
+                      <button
+                        onClick={() => set(p.id, n + 1)}
+                        className="w-8 h-8 rounded border hover:bg-muted"
+                      >
+                        <Plus className="w-3 h-3 mx-auto" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => set(p.id, n - 1)} className="w-8 h-8 rounded border hover:bg-muted"><Minus className="w-3 h-3 mx-auto" /></button>
-                    <input type="number" value={n} onChange={(e) => set(p.id, Number(e.target.value) || 0)}
-                      className="w-14 h-8 text-center rounded border bg-background text-sm" />
-                    <button onClick={() => set(p.id, n + 1)} className="w-8 h-8 rounded border hover:bg-muted"><Plus className="w-3 h-3 mx-auto" /></button>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
       </div>
@@ -96,8 +142,19 @@ function LabelsPage() {
         {labels.map((p, i) => (
           <div key={i} className="label">
             {showName && <div className="label-name">{p.name}</div>}
-            <Barcode value={p.code} height={40} width={1.4} fontSize={12} margin={2} displayValue={true} />
-            {showPrice && <div className="label-price">{formatSDG(p.sell_price)} · {settings.storeName}</div>}
+            <Barcode
+              value={p.code}
+              height={40}
+              width={1.4}
+              fontSize={12}
+              margin={2}
+              displayValue={true}
+            />
+            {showPrice && (
+              <div className="label-price">
+                {formatSDG(p.sell_price)} · {settings.storeName}
+              </div>
+            )}
           </div>
         ))}
         {total === 0 && (

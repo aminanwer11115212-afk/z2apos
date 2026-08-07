@@ -38,27 +38,27 @@
 :root {
   --radius: 0.75rem;
   --background: oklch(0.985 0.005 240);
-  --foreground: oklch(0.20 0.03 250);
+  --foreground: oklch(0.2 0.03 250);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.20 0.03 250);
+  --card-foreground: oklch(0.2 0.03 250);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.20 0.03 250);
+  --popover-foreground: oklch(0.2 0.03 250);
   --primary: oklch(0.45 0.18 255);
   --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.95 0.01 250);
   --secondary-foreground: oklch(0.25 0.03 250);
   --muted: oklch(0.96 0.005 250);
-  --muted-foreground: oklch(0.50 0.02 250);
+  --muted-foreground: oklch(0.5 0.02 250);
   --accent: oklch(0.93 0.03 255);
   --accent-foreground: oklch(0.25 0.05 255);
-  --destructive: oklch(0.60 0.22 25);
+  --destructive: oklch(0.6 0.22 25);
   --destructive-foreground: oklch(0.99 0 0);
   --success: oklch(0.62 0.15 155);
   --success-foreground: oklch(0.99 0 0);
   --warning: oklch(0.75 0.15 75);
-  --warning-foreground: oklch(0.20 0.03 250);
-  --border: oklch(0.90 0.01 250);
-  --input: oklch(0.90 0.01 250);
+  --warning-foreground: oklch(0.2 0.03 250);
+  --border: oklch(0.9 0.01 250);
+  --input: oklch(0.9 0.01 250);
   --ring: oklch(0.45 0.18 255);
 }
 
@@ -69,35 +69,44 @@
   --card-foreground: oklch(0.97 0.005 250);
   --popover: oklch(0.22 0.02 250);
   --popover-foreground: oklch(0.97 0.005 250);
-  --primary: oklch(0.70 0.15 255);
+  --primary: oklch(0.7 0.15 255);
   --primary-foreground: oklch(0.16 0.02 250);
   --secondary: oklch(0.28 0.02 250);
   --secondary-foreground: oklch(0.97 0.005 250);
   --muted: oklch(0.28 0.02 250);
-  --muted-foreground: oklch(0.70 0.02 250);
+  --muted-foreground: oklch(0.7 0.02 250);
   --accent: oklch(0.32 0.04 255);
   --accent-foreground: oklch(0.97 0.005 250);
   --destructive: oklch(0.65 0.22 25);
   --destructive-foreground: oklch(0.99 0 0);
-  --success: oklch(0.70 0.15 155);
+  --success: oklch(0.7 0.15 155);
   --success-foreground: oklch(0.16 0.02 250);
-  --warning: oklch(0.80 0.15 75);
+  --warning: oklch(0.8 0.15 75);
   --warning-foreground: oklch(0.16 0.02 250);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.70 0.15 255);
+  --ring: oklch(0.7 0.15 255);
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
-  html { direction: rtl; }
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    direction: rtl;
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
-  input, button, select, textarea { font-family: inherit; }
+  input,
+  button,
+  select,
+  textarea {
+    font-family: inherit;
+  }
 }
 
 /* ==================================================
@@ -106,32 +115,70 @@
    ================================================== */
 
 /* Named page sizes */
-@page a4paper { size: A4; margin: 12mm; }
-@page thermal80 { size: 80mm auto; margin: 3mm; }
-@page thermal58 { size: 58mm auto; margin: 2mm; }
+@page a4paper {
+  size: A4;
+  margin: 12mm;
+}
+@page thermal80 {
+  size: 80mm auto;
+  margin: 3mm;
+}
+@page thermal58 {
+  size: 58mm auto;
+  margin: 2mm;
+}
 
 @media print {
-  html, body { background: #ffffff !important; color: #0f172a !important; }
-  .no-print { display: none !important; }
-  .print-only { display: block !important; }
+  html,
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
   /* Hide app chrome (header, sidebar, bottom nav, mobile drawer) during printing
      so only the invoice / .print-area is sent to the printer. */
   body > div > header,
   body > div > div > aside,
   body > div > nav,
-  body > div > div > div.lg\:hidden { display: none !important; }
-  main { padding: 0 !important; margin: 0 !important; }
-  main > div { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
-  .print-area {
-    box-shadow: none !important; border: none !important;
-    background: #ffffff !important; color: #0f172a !important;
+  body > div > div > div.lg\:hidden {
+    display: none !important;
   }
-  .print-area * { color: #0f172a !important; border-color: #cbd5e1 !important; }
-  .print-area .muted-print { color: #475569 !important; }
-  .print-area table { border-collapse: collapse; width: 100%; }
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  main > div {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+  .print-area {
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+  .print-area * {
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+  }
+  .print-area .muted-print {
+    color: #475569 !important;
+  }
+  .print-area table {
+    border-collapse: collapse;
+    width: 100%;
+  }
 
   /* ---- A4 (default) ---- */
-  body.print-format-a4 { page: a4paper; }
+  body.print-format-a4 {
+    page: a4paper;
+  }
   body.print-format-a4 .print-area {
     max-width: 100% !important;
     padding: 16px !important;
@@ -139,12 +186,17 @@
   }
   body.print-format-a4 .print-area th,
   body.print-format-a4 .print-area td {
-    border: 1px solid #cbd5e1 !important; padding: 6px 8px !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 6px 8px !important;
   }
-  body.print-format-a4 .print-area thead { background: #f1f5f9 !important; }
+  body.print-format-a4 .print-area thead {
+    background: #f1f5f9 !important;
+  }
 
   /* ---- Thermal 80mm ---- */
-  body.print-format-thermal80 { page: thermal80; }
+  body.print-format-thermal80 {
+    page: thermal80;
+  }
   body.print-format-thermal80 .print-area {
     max-width: 100% !important;
     padding: 4px !important;
@@ -157,10 +209,14 @@
     border: none !important;
     border-bottom: 1px solid #cbd5e1 !important;
   }
-  body.print-format-thermal80 .print-area thead { background: transparent !important; }
+  body.print-format-thermal80 .print-area thead {
+    background: transparent !important;
+  }
 
   /* ---- Thermal 58mm ---- */
-  body.print-format-thermal58 { page: thermal58; }
+  body.print-format-thermal58 {
+    page: thermal58;
+  }
   body.print-format-thermal58 .print-area {
     max-width: 100% !important;
     padding: 2px !important;
@@ -173,28 +229,44 @@
     border: none !important;
     border-bottom: 1px solid #cbd5e1 !important;
   }
-  body.print-format-thermal58 .print-area thead { background: transparent !important; }
+  body.print-format-thermal58 .print-area thead {
+    background: transparent !important;
+  }
 
   /* Extra copies of an invoice (settings.printCopies) — screen-hidden, each on
      its own sheet. */
-  .print-copy { display: block !important; break-before: page; page-break-before: always; }
+  .print-copy {
+    display: block !important;
+    break-before: page;
+    page-break-before: always;
+  }
 
   /* Hide bulky columns / blocks on thermal receipts */
   body.print-format-thermal80 .hide-on-thermal,
-  body.print-format-thermal58 .hide-on-thermal { display: none !important; }
+  body.print-format-thermal58 .hide-on-thermal {
+    display: none !important;
+  }
 
   /* Fallback for unspecified body (older calls to window.print without picker) */
   body:not(.print-format-a4):not(.print-format-thermal80):not(.print-format-thermal58) {
     page: a4paper;
   }
-  body:not(.print-format-a4):not(.print-format-thermal80):not(.print-format-thermal58) .print-area th,
-  body:not(.print-format-a4):not(.print-format-thermal80):not(.print-format-thermal58) .print-area td {
-    border: 1px solid #cbd5e1 !important; padding: 6px 8px !important;
+  body:not(.print-format-a4):not(.print-format-thermal80):not(.print-format-thermal58)
+    .print-area
+    th,
+  body:not(.print-format-a4):not(.print-format-thermal80):not(.print-format-thermal58)
+    .print-area
+    td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 6px 8px !important;
   }
 }
-.print-only { display: none; }
-.print-copy { display: none; }
-
+.print-only {
+  display: none;
+}
+.print-copy {
+  display: none;
+}
 
 /* ============================================================
    Hide Lovable badge — resilient to class/structure changes.
@@ -261,8 +333,6 @@ div:where([style*="position: fixed"], [style*="position:fixed"]):has(> a[href*="
   display: none !important;
 }
 
-
-
 /* Barcode labels sheet — 40mm x 25mm grid, prints without page decorations */
 .labels-sheet {
   display: grid;
@@ -292,10 +362,15 @@ div:where([style*="position: fixed"], [style*="position:fixed"]):has(> a[href*="
   font-weight: 700;
 }
 @media print {
-  @page { size: A4; margin: 6mm; }
+  @page {
+    size: A4;
+    margin: 6mm;
+  }
   .labels-sheet {
     grid-template-columns: repeat(5, 1fr);
     gap: 3mm;
   }
-  .labels-sheet .label { border: none; }
+  .labels-sheet .label {
+    border: none;
+  }
 }

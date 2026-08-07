@@ -35,14 +35,19 @@ export function PrintFormatPicker({ initial = "a4" }: { initial?: PrintFormat })
     <div className="inline-flex items-center gap-1 rounded-lg border bg-card p-0.5">
       <div className="flex">
         {OPTIONS.map((o) => (
-          <button key={o.v} type="button" onClick={() => setFmt(o.v)}
-            className={`h-9 px-2.5 text-xs font-medium rounded-md transition-colors ${fmt === o.v ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
+          <button
+            key={o.v}
+            type="button"
+            onClick={() => setFmt(o.v)}
+            className={`h-9 px-2.5 text-xs font-medium rounded-md transition-colors ${fmt === o.v ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+          >
             {o.label}
           </button>
         ))}
       </div>
       <Btn onClick={doPrint} className="h-9 px-3 text-sm">
-        <Printer className="w-4 h-4 inline ml-1" />طباعة
+        <Printer className="w-4 h-4 inline ml-1" />
+        طباعة
       </Btn>
     </div>
   );

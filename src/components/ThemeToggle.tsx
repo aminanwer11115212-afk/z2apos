@@ -30,7 +30,11 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
     const next: Theme = theme === "dark" ? "light" : "dark";
     setTheme(next);
     applyTheme(next);
-    try { localStorage.setItem(KEY, next); } catch { /* ignore */ }
+    try {
+      localStorage.setItem(KEY, next);
+    } catch {
+      /* ignore */
+    }
   };
 
   return (
