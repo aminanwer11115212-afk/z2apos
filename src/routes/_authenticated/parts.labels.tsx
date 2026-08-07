@@ -30,9 +30,11 @@ function LabelsPage() {
     },
   });
 
-  const filtered = useMemo(() =>
-    parts.filter((p) => !q || p.code.includes(q) || p.name.includes(q)).slice(0, 50),
-    [parts, q]);
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return parts.slice(0, 50);
+    return parts.filter((p) => p.code.toLowerCase().includes(s) || p.name.toLowerCase().includes(s)).slice(0, 50);
+  }, [parts, q]);
 
   const set = (id: string, n: number) => setCounts((c) => ({ ...c, [id]: Math.max(0, n) }));
 

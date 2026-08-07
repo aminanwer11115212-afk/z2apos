@@ -51,22 +51,44 @@ function PurchasesPage() {
   );
 }
 
-const METHOD_ORDER: PaymentMethod[] = ["cash", "bank", "wallet"];
 const METHOD_LABEL: Record<PaymentMethod, string> = { cash: "نقدي", bank: "بنكي", wallet: "محفظة", transfer: "تحويل", credit: "آجل" };
 
 function NewPurchase({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
   const settings = useSettings();
+  // Respect the enabled/default payment methods configured in settings rather than
+  // showing a fixed list.
+  const enabledMethods = useMemo(
+    () => (Object.keys(settings.paymentMethods) as PaymentMethod[]).filter((k) => settings.paymentMethods[k]?.enabled),
+    [settings.paymentMethods],
+  );
+  const initialMethod: PaymentMethod = enabledMethods.includes(settings.defaultMethod)
+    ? settings.defaultMethod : (enabledMethods[0] ?? "cash");
   const [q, setQ] = useState(""); const [lines, setLines] = useState<Line[]>([]); const [supplierId, setSupplierId] = useState("");
-  const [paid, setPaid] = useState(0); const [method, setMethod] = useState<PaymentMethod>(settings.defaultMethod);
-  const [accountId, setAccountId] = useState(settings.paymentMethods[method]?.defaultAccountId ?? ""); const [txRef, setTxRef] = useState(""); const [notes, setNotes] = useState("");
+  const [paid, setPaid] = useState(0); const [method, setMethod] = useState<PaymentMethod>(initialMethod);
+  const [accountId, setAccountId] = useState(settings.paymentMethods[initialMethod]?.defaultAccountId ?? ""); const [txRef, setTxRef] = useState(""); const [notes, setNotes] = useState("");
   const { data: parts = [] } = useQuery({ queryKey: ["parts-lite-cost"], queryFn: async () => { const { data, error } = await supabase.from("parts").select("id,code,name,cost_price").order("name"); if (error) throw error; return data as Part[]; } });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers-lite"], queryFn: async () => { const { data, error } = await supabase.from("suppliers").select("id,name").order("name"); if (error) throw error; return data as { id: string; name: string }[]; } });
-  const results = useMemo(() => !q ? [] : parts.filter((p) => p.code.includes(q) || p.name.includes(q)).slice(0, 8), [q, parts]);
+  const results = useMemo(() => {
+    if (!q.trim()) return [];
+    const s = q.trim().toLowerCase();
+    return parts.filter((p) => p.code.toLowerCase().includes(s) || p.name.toLowerCase().includes(s)).slice(0, 8);
+  }, [q, parts]);
   const addPart = (p: Part) => { setLines((prev) => { const i = prev.findIndex((l) => l.part.id === p.id); if (i >= 0) { const nx = [...prev]; nx[i] = { ...nx[i], qty: nx[i].qty + 1 }; return nx; } return [...prev, { part: p, qty: 1, unit_cost: Number(p.cost_price) }]; }); setQ(""); };
   const total = lines.reduce((s, l) => s + l.qty * l.unit_cost, 0);
   const isDigital = method === "bank" || method === "wallet";
   const account = settings.accounts.find((a) => a.id === accountId);
-  const availableAccounts = isDigital ? settings.accounts.filter((a) => a.type === "bank" || a.type === "wallet") : settings.accounts.filter((a) => a.type === "cash");
+  const accountsFor = (m: PaymentMethod) =>
+    m === "cash" ? settings.accounts.filter((a) => a.type === "cash") : settings.accounts.filter((a) => a.type === "bank" || a.type === "wallet");
+  const availableAccounts = accountsFor(method);
+
+  // Keep the account in step with the method, falling back to the first account
+  // that method can actually use when the configured default doesn't fit.
+  const selectMethod = (m: PaymentMethod) => {
+    setMethod(m);
+    const pool = accountsFor(m);
+    const preferred = settings.paymentMethods[m]?.defaultAccountId;
+    setAccountId(pool.some((a) => a.id === preferred) ? preferred! : (pool[0]?.id ?? ""));
+  };
   const save = useMutation({
     mutationFn: async () => {
       if (lines.length === 0) throw new Error("لا توجد أصناف");
@@ -123,9 +145,9 @@ function NewPurchase({ onDone, onCancel }: { onDone: () => void; onCancel: () =>
           <Field label="المورد"><select value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className="w-full h-11 px-3 rounded-lg border bg-background"><option value="">— بدون —</option>{suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></Field>
           <Field label="المدفوع"><Input type="number" step="0.01" value={paid} onChange={(e) => setPaid(Number(e.target.value) || 0)} /></Field>
           <Field label="طريقة الدفع">
-            <div className="grid grid-cols-3 gap-2">
-              {METHOD_ORDER.map((m) => (
-                <button key={m} type="button" onClick={() => { setMethod(m); setAccountId(settings.paymentMethods[m]?.defaultAccountId ?? ""); }} className={`h-10 rounded-lg border text-sm font-medium ${method === m ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
+            <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.max(1, enabledMethods.length)}, minmax(0, 1fr))` }}>
+              {enabledMethods.map((m) => (
+                <button key={m} type="button" onClick={() => selectMethod(m)} className={`h-10 rounded-lg border text-sm font-medium ${method === m ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
                   {paymentMethodIcon(m)} {METHOD_LABEL[m]}
                 </button>
               ))}

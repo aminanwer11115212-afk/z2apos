@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
@@ -17,6 +17,7 @@ type Sale = {
 };
 
 function SalesList() {
+  const nav = useNavigate();
   const { data = [] } = useQuery({
     queryKey: ["sales-list"],
     queryFn: async () => {
@@ -51,8 +52,9 @@ function SalesList() {
                 const due = net - Number(s.paid);
                 return (
                   <tr key={s.id} className="border-t hover:bg-muted/50 cursor-pointer" onClick={(e) => {
+                    // The invoice-number cell is a real link; let it handle its own click.
                     if ((e.target as HTMLElement).closest("a")) return;
-                    window.location.href = `/sales/${s.id}`;
+                    nav({ to: "/sales/$id", params: { id: s.id } });
                   }}>
                     <td className="p-3 font-mono">
                       <Link to="/sales/$id" params={{ id: s.id }} className="text-primary hover:underline">#{s.invoice_no}</Link>

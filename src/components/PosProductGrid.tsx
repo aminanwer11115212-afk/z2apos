@@ -20,8 +20,10 @@ export function PosProductGrid({
 
   const filtered = useMemo(() => {
     if (!q.trim()) return parts;
-    const s = q.trim();
-    return parts.filter((p) => p.code.includes(s) || p.name.includes(s));
+    // Codes are generated uppercase (P1234…), so match case-insensitively —
+    // otherwise a lowercase scan/typing never finds anything.
+    const s = q.trim().toLowerCase();
+    return parts.filter((p) => p.code.toLowerCase().includes(s) || p.name.toLowerCase().includes(s));
   }, [q, parts]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));

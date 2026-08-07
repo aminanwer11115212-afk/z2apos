@@ -83,8 +83,10 @@ function PartsPage() {
     dialog.show();
   };
 
+  const s = q.trim().toLowerCase();
   const filtered = data.filter((p) =>
-    !q || p.name.includes(q) || (p.car_model ?? "").includes(q) || (p.category ?? "").includes(q)
+    !s || p.name.toLowerCase().includes(s) || p.code.toLowerCase().includes(s) ||
+    (p.car_model ?? "").toLowerCase().includes(s) || (p.category ?? "").toLowerCase().includes(s)
   );
 
   return (
@@ -95,7 +97,7 @@ function PartsPage() {
           {isAdmin && <Btn onClick={openNew}><Plus className="w-4 h-4 inline ml-1" />صنف جديد</Btn>}
         </div>} />
 
-      <div className="mb-4"><SearchBar value={q} onChange={setQ} placeholder="بحث بالاسم، الفئة، نوع السيارة..." /></div>
+      <div className="mb-4"><SearchBar value={q} onChange={setQ} placeholder="بحث بالكود، الاسم، الفئة، نوع السيارة..." /></div>
 
       {isLoading ? <p className="text-center text-muted-foreground py-8">جارٍ التحميل...</p> :
        filtered.length === 0 ? <EmptyState title="لا توجد قطع بعد" action={isAdmin && <Btn onClick={openNew}>إضافة أول صنف</Btn>} /> : (

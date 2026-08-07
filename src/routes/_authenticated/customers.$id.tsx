@@ -41,10 +41,19 @@ function CustomerStatement() {
         supabase.from("sales").select("id,invoice_no,total,discount,paid,created_at,notes").eq("customer_id", id).order("created_at"),
         supabase.from("payments").select("id,amount,method,account_name,notes,created_at,sale_id").eq("customer_id", id).eq("direction", "in").order("created_at"),
       ]);
+      // A payment linked to a sale is already folded into sales.paid by the
+      // apply_payment trigger. Crediting both the invoice row and the payment row
+      // would count it twice, so the invoice only credits what was paid up front.
+      const linkedToSale = new Map<string, number>();
+      for (const p of paymentsRes.data ?? []) {
+        if (p.sale_id) linkedToSale.set(p.sale_id, (linkedToSale.get(p.sale_id) ?? 0) + Number(p.amount));
+      }
+
       const list: Row[] = [];
       for (const s of salesRes.data ?? []) {
         const net = Number(s.total) - Number(s.discount);
-        list.push({ kind: "sale", id: s.id, date: s.created_at, ref: `فاتورة #${s.invoice_no}`, debit: net, credit: Number(s.paid), note: s.notes ?? "" });
+        const paidAtSale = Number(s.paid) - (linkedToSale.get(s.id) ?? 0);
+        list.push({ kind: "sale", id: s.id, date: s.created_at, ref: `فاتورة #${s.invoice_no}`, debit: net, credit: Math.max(0, paidAtSale), note: s.notes ?? "" });
       }
       for (const p of paymentsRes.data ?? []) {
         list.push({ kind: "payment", id: p.id, date: p.created_at, ref: `دفعة${p.sale_id ? " (على فاتورة)" : ""}`, debit: 0, credit: Number(p.amount), note: `${paymentMethodLabel(p.method)}${p.account_name ? " · " + p.account_name : ""}${p.notes ? " · " + p.notes : ""}` });
@@ -88,10 +97,11 @@ function CustomerStatement() {
               {Number(cust.balance) > 0 ? `تحصيل (${formatSDG(Number(cust.balance))})` : "تسجيل دفعة"}
             </Btn>
             {waHref && (
-              <a href={waHref} target="_blank" rel="noreferrer" className="btn-icon-outline">
-                <MessageCircle className="w-4 h-4 inline ml-1" />واتساب</a>
+              <a href={waHref} target="_blank" rel="noreferrer">
+                <Btn variant="outline"><MessageCircle className="w-4 h-4 inline ml-1" />واتساب</Btn>
+              </a>
             )}
-            <button onClick={() => window.print()} className="btn-icon-outline"><Printer className="w-4 h-4" /></button>
+            <Btn variant="outline" onClick={() => window.print()}><Printer className="w-4 h-4" /></Btn>
           </div>} />
         <Link to="/customers" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
           <ArrowRight className="w-4 h-4 ml-1" />العودة إلى قائمة العملاء</Link>

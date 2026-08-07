@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Printer } from "lucide-react";
 import { Btn } from "@/components/ui-kit";
 import type { PrintFormat } from "@/lib/settings";
@@ -9,21 +9,27 @@ const OPTIONS: { v: PrintFormat; label: string }[] = [
   { v: "thermal58", label: "حراري 58mm" },
 ];
 
+const FORMAT_CLASSES = ["print-format-a4", "print-format-thermal80", "print-format-thermal58"];
+
 /**
  * Small inline picker that applies `body.print-format-*` and triggers print.
  * Lets the user choose the paper format from the invoice itself, overriding
  * the default from settings for a single print run.
+ *
+ * This component owns the body class outright: it clears every format class on
+ * unmount, so a thermal choice can't leak onto pages printed later (statements,
+ * reports, barcode labels), which all rely on the A4 fallback rule.
  */
 export function PrintFormatPicker({ initial = "a4" }: { initial?: PrintFormat }) {
   const [fmt, setFmt] = useState<PrintFormat>(initial);
 
-  const doPrint = () => {
-    // Remove any existing print-format class then apply the current one.
-    document.body.classList.remove("print-format-a4", "print-format-thermal80", "print-format-thermal58");
+  useEffect(() => {
+    document.body.classList.remove(...FORMAT_CLASSES);
     document.body.classList.add(`print-format-${fmt}`);
-    // Give the browser a tick to apply @page rules before opening the dialog.
-    setTimeout(() => window.print(), 30);
-  };
+    return () => document.body.classList.remove(...FORMAT_CLASSES);
+  }, [fmt]);
+
+  const doPrint = () => window.print();
 
   return (
     <div className="inline-flex items-center gap-1 rounded-lg border bg-card p-0.5">

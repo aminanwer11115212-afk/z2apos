@@ -26,8 +26,18 @@ function SupplierStatement() {
         supabase.from("purchases").select("id,invoice_no,total,paid,created_at,notes").eq("supplier_id", id).order("created_at"),
         supabase.from("payments").select("id,amount,method,account_name,notes,created_at,purchase_id").eq("supplier_id", id).eq("direction", "out").order("created_at"),
       ]);
+      // A payment linked to a purchase is already folded into purchases.paid by the
+      // apply_payment trigger; debiting both rows would count the same money twice.
+      const linkedToPurchase = new Map<string, number>();
+      for (const pay of payRes.data ?? []) {
+        if (pay.purchase_id) linkedToPurchase.set(pay.purchase_id, (linkedToPurchase.get(pay.purchase_id) ?? 0) + Number(pay.amount));
+      }
+
       const list: Row[] = [];
-      for (const p of pRes.data ?? []) list.push({ kind: "purchase", id: p.id, date: p.created_at, ref: `شراء #${p.invoice_no}`, debit: Number(p.paid), credit: Number(p.total), note: p.notes ?? "" });
+      for (const p of pRes.data ?? []) {
+        const paidAtPurchase = Number(p.paid) - (linkedToPurchase.get(p.id) ?? 0);
+        list.push({ kind: "purchase", id: p.id, date: p.created_at, ref: `شراء #${p.invoice_no}`, debit: Math.max(0, paidAtPurchase), credit: Number(p.total), note: p.notes ?? "" });
+      }
       for (const pay of payRes.data ?? []) list.push({ kind: "payment", id: pay.id, date: pay.created_at, ref: `سداد${pay.purchase_id ? " (على فاتورة)" : ""}`, debit: Number(pay.amount), credit: 0, note: `${paymentMethodLabel(pay.method)}${pay.account_name ? " · " + pay.account_name : ""}${pay.notes ? " · " + pay.notes : ""}` });
       list.sort((a, b) => a.date.localeCompare(b.date)); return list;
     },

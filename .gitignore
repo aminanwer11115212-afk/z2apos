@@ -31,6 +31,8 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment variables
+# Environment variables — .env holds real project credentials, never commit it
+# (see .env.example). Keep .env.example tracked as the documented template.
+.env
 .env.local
 .env.*.local

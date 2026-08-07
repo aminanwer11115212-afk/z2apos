@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMyRole } from "@/lib/auth";
 import { useSettings, encodeNotes, computeTax } from "@/lib/settings";
 import { type PaymentMethod } from "@/lib/payments";
-import { PosPart, PosLine, HeldSale, loadHeld, saveHeld } from "@/lib/pos";
+import { PosPart, PosLine } from "@/lib/pos";
 import { usePosCustomerDialog } from "@/components/PosCustomerDialog";
 import { usePosHeld } from "./usePosHeld";
 import { toast } from "sonner";
@@ -40,7 +40,19 @@ export function usePos() {
   const methodRef = useRef<HTMLButtonElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
   const custDialog = usePosCustomerDialog((id) => setCustomerId(id));
-  const held = usePosHeld({ lines, setLines, setCustomerId, setDiscount, setPaid, setNotes, setPaymentMethod, setBankAccountId, setTxRef, searchRef });
+  const held = usePosHeld({
+    lines, customerId, discount, paid, notes, paymentMethod, bankAccountId, txRef,
+    setLines, setCustomerId, setDiscount, setPaid, setNotes, setPaymentMethod, setBankAccountId, setTxRef, searchRef,
+  });
+
+  // Switching payment method re-points the account at that method's configured
+  // default, matching PaymentDialog and the standalone payment page.
+  const selectPaymentMethod = (m: PaymentMethod) => {
+    setPaymentMethod(m);
+    const preferred = settings.paymentMethods[m]?.defaultAccountId;
+    const pool = m === "cash" ? (cashAccount ? [cashAccount] : []) : digitalAccounts;
+    setBankAccountId(pool.some((a) => a.id === preferred) ? preferred! : (pool[0]?.id ?? ""));
+  };
 
   const { data: parts = [] } = useQuery({
     queryKey: ["parts-lite"],
@@ -88,20 +100,28 @@ export function usePos() {
   });
 
   useEffect(() => { searchRef.current?.focus(); }, []);
+
+  // The shortcut handler closes over lines/save/held, which change on nearly every
+  // render. Keeping the latest handler in a ref lets the listener be attached once
+  // instead of being torn down and re-added continuously.
+  const onKeyRef = useRef<(e: KeyboardEvent) => void>(() => {});
+  onKeyRef.current = (e: KeyboardEvent) => {
+    const tag = (e.target as HTMLElement).tagName; const inField = tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA";
+    if (e.key === "F2" || (e.key === "/" && !inField)) { e.preventDefault(); searchRef.current?.focus(); searchRef.current?.select(); }
+    else if (e.key === "F4") { e.preventDefault(); customerRef.current?.focus(); }
+    else if (e.key === "F6") { e.preventDefault(); if (!isDigital) selectPaymentMethod("bank"); setTimeout(() => accountRef.current?.focus(), 0); }
+    else if (e.key === "F7") { e.preventDefault(); methodRef.current?.focus(); }
+    else if (e.key === "F9") { e.preventDefault(); if (lines.length && !save.isPending) save.mutate(); }
+    else if (e.key === "F8") { e.preventDefault(); held.hold(); }
+    else if (!inField && (e.key === "+" || e.key === "=")) { const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part.id, last.qty + 1); } }
+    else if (!inField && (e.key === "-" || e.key === "_")) { const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part.id, Math.max(0.01, last.qty - 1)); } }
+  };
+
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement).tagName; const inField = tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA";
-      if (e.key === "F2" || (e.key === "/" && !inField)) { e.preventDefault(); searchRef.current?.focus(); searchRef.current?.select(); }
-      else if (e.key === "F4") { e.preventDefault(); customerRef.current?.focus(); }
-      else if (e.key === "F6") { e.preventDefault(); if (!isDigital) setPaymentMethod("bank"); setTimeout(() => accountRef.current?.focus(), 0); }
-      else if (e.key === "F7") { e.preventDefault(); methodRef.current?.focus(); }
-      else if (e.key === "F9") { e.preventDefault(); if (lines.length && !save.isPending) save.mutate(); }
-      else if (e.key === "F8") { e.preventDefault(); held.hold(); }
-      else if (!inField && (e.key === "+" || e.key === "=")) { const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part.id, last.qty + 1); } }
-      else if (!inField && (e.key === "-" || e.key === "_")) { const last = lines[lines.length - 1]; if (last) { e.preventDefault(); setQty(last.part.id, Math.max(0.01, last.qty - 1)); } }
-    };
-    window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
-  }, [lines, save, paymentMethod, isDigital, held.hold]);
+    const onKey = (e: KeyboardEvent) => onKeyRef.current(e);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === "Escape") setQ(""); };
 
@@ -110,7 +130,7 @@ export function usePos() {
     parts, customers,
     lines, canEditPrice, setQty, setPrice, remove, addPart,
     customerId, setCustomerId, customerRef,
-    paymentMethod, setPaymentMethod, methodRef,
+    paymentMethod, setPaymentMethod: selectPaymentMethod, methodRef,
     bankAccountId, setBankAccountId, accountRef,
     txRef, setTxRef,
     discount, setDiscount,

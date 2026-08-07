@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
 import { useSettings, parseNotes, computeTax, formatInvoiceNo, renderTemplate } from "@/lib/settings";
@@ -17,17 +17,21 @@ import { ArrowRight, Wallet, MessageCircle, Pencil, ExternalLink } from "lucide-
 export const Route = createFileRoute("/_authenticated/sales/$id")({
   head: () => ({ meta: [{ title: "فاتورة — 2A" }] }),
   component: SaleView,
-  errorComponent: ({ reset }) => {
-    const r = useRouter();
-    return (
-      <div className="p-6 text-center">
-        <p className="text-destructive">تعذّر تحميل الفاتورة</p>
-        <button className="mt-4 underline" onClick={() => { r.invalidate(); reset(); }}>إعادة المحاولة</button>
-      </div>
-    );
-  },
+  errorComponent: SaleErrorComponent,
   notFoundComponent: () => <div className="p-6 text-center">الفاتورة غير موجودة</div>,
 });
+
+// Declared as a real component (capitalised) so the useRouter hook call is valid —
+// an inline arrow function here trips the rules-of-hooks contract.
+function SaleErrorComponent({ reset }: { reset: () => void }) {
+  const router = useRouter();
+  return (
+    <div className="p-6 text-center">
+      <p className="text-destructive">تعذّر تحميل الفاتورة</p>
+      <button className="mt-4 underline" onClick={() => { router.invalidate(); reset(); }}>إعادة المحاولة</button>
+    </div>
+  );
+}
 
 type SaleFull = {
   id: string; invoice_no: number; total: number; discount: number; paid: number;
@@ -54,12 +58,6 @@ function SaleView() {
       return data as unknown as SaleFull;
     },
   });
-
-  useEffect(() => {
-    const cls = `print-format-${settings.printFormat}`;
-    document.body.classList.add(cls);
-    return () => document.body.classList.remove(cls);
-  }, [settings.printFormat]);
 
   if (isLoading || !data) return <div className="p-6 text-center text-muted-foreground">جارٍ التحميل…</div>;
 

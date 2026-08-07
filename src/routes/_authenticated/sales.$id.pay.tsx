@@ -21,7 +21,12 @@ const meta: Record<PaymentMethod, { icon: string; label: string }> = {
   transfer: { icon: "🔁", label: "تحويل" },
   credit: { icon: "📝", label: "آجل" },
 };
-const methods: PaymentMethod[] = ["cash", "bank", "wallet"];
+type Sale = {
+  id: string; invoice_no: number; total: number; discount: number; paid: number;
+  created_at: string; notes: string | null;
+  payment_method: string | null; account_name: string | null; customer_id: string | null;
+  customers: { id: string; name: string; phone: string | null; balance: number } | null;
+};
 
 function InvoicePaymentPage() {
   const { id } = Route.useParams();
@@ -29,9 +34,18 @@ function InvoicePaymentPage() {
   const qc = useQueryClient();
   const settings = useSettings();
 
+  // Only offer methods the admin enabled in settings, and fall back sensibly when
+  // the configured default itself is disabled.
+  const methods = useMemo(
+    () => (Object.keys(settings.paymentMethods) as PaymentMethod[]).filter((k) => settings.paymentMethods[k]?.enabled),
+    [settings.paymentMethods],
+  );
+  const initialMethod: PaymentMethod = methods.includes(settings.defaultMethod)
+    ? settings.defaultMethod : (methods[0] ?? "cash");
+
   const [amount, setAmount] = useState(0);
-  const [method, setMethod] = useState<PaymentMethod>(settings.defaultMethod);
-  const [accountId, setAccountId] = useState(settings.paymentMethods[method]?.defaultAccountId || "");
+  const [method, setMethod] = useState<PaymentMethod>(initialMethod);
+  const [accountId, setAccountId] = useState(settings.paymentMethods[initialMethod]?.defaultAccountId || "");
   const [txRef, setTxRef] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -42,7 +56,7 @@ function InvoicePaymentPage() {
         .select("id,invoice_no,total,discount,paid,created_at,notes,payment_method,account_name,customer_id, customers(id,name,phone,balance)")
         .eq("id", id).single();
       if (error) throw error;
-      return data as any;
+      return data as unknown as Sale;
     },
   });
   const accounts = settings.accounts;
@@ -51,8 +65,19 @@ function InvoicePaymentPage() {
   const tax = computeTax(net, settings);
   const due = sale ? Math.max(0, tax.grand - Number(sale.paid)) : 0;
   const isDigital = method === "bank" || method === "wallet";
-  const eligible = useMemo(() => accounts.filter((a: any) => method === "cash" ? a.type === "cash" : (a.type === "bank" || a.type === "wallet")), [accounts, method]);
-  const acc = accounts.find((a: any) => a.id === accountId);
+  const accountsFor = (m: PaymentMethod) =>
+    accounts.filter((a) => (m === "cash" ? a.type === "cash" : a.type === "bank" || a.type === "wallet"));
+  const eligible = useMemo(() => accountsFor(method), [accounts, method]); // eslint-disable-line react-hooks/exhaustive-deps
+  const acc = accounts.find((a) => a.id === accountId);
+
+  // Point the account at the new method's configured default, falling back to the
+  // first account that method can actually use.
+  const selectMethod = (m: PaymentMethod) => {
+    setMethod(m);
+    const pool = accountsFor(m);
+    const preferred = settings.paymentMethods[m]?.defaultAccountId;
+    setAccountId(pool.some((a) => a.id === preferred) ? preferred! : (pool[0]?.id ?? ""));
+  };
 
   const save = useMutation({
     mutationFn: async () => {
@@ -91,9 +116,9 @@ function InvoicePaymentPage() {
         <Field label="المبلغ *"><Input type="number" step="0.01" value={amount || ""} onChange={(e) => setAmount(Number(e.target.value))} autoFocus /></Field>
         <button onClick={() => setAmount(due)} className="text-xs text-primary hover:underline">تعيين المبلغ المتبقي</button>
         <Field label="طريقة الدفع">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.max(1, methods.length)}, minmax(0, 1fr))` }}>
             {methods.map((m) => (
-              <button key={m} onClick={() => { setMethod(m); setAccountId(settings.paymentMethods[m]?.defaultAccountId || eligible.find((a: any) => m === "cash" ? a.type === "cash" : (a.type === "bank" || a.type === "wallet"))?.id || ""); }}
+              <button key={m} onClick={() => selectMethod(m)}
                 className={`h-10 rounded-lg border text-sm font-medium ${method === m ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
                 {meta[m].icon} {meta[m].label}
               </button>
@@ -102,7 +127,7 @@ function InvoicePaymentPage() {
         </Field>
         <Field label="الحساب">
           <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className="w-full h-11 px-3 rounded-lg border bg-background">
-            {eligible.map((a: any) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            {eligible.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
         </Field>
         {isDigital && <Field label="رقم العملية"><Input value={txRef} onChange={(e) => setTxRef(e.target.value)} dir="ltr" className="text-right font-mono" /></Field>}
