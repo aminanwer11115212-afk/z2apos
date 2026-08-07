@@ -35,8 +35,10 @@ function SupplierStatement() {
 
       const list: Row[] = [];
       for (const p of pRes.data ?? []) {
+        // Deliberately unclamped — see customers.$id.tsx: keeps the statement
+        // reconciled with suppliers.balance even after a manual paid edit.
         const paidAtPurchase = Number(p.paid) - (linkedToPurchase.get(p.id) ?? 0);
-        list.push({ kind: "purchase", id: p.id, date: p.created_at, ref: `شراء #${p.invoice_no}`, debit: Math.max(0, paidAtPurchase), credit: Number(p.total), note: p.notes ?? "" });
+        list.push({ kind: "purchase", id: p.id, date: p.created_at, ref: `شراء #${p.invoice_no}`, debit: paidAtPurchase, credit: Number(p.total), note: p.notes ?? "" });
       }
       for (const pay of payRes.data ?? []) list.push({ kind: "payment", id: pay.id, date: pay.created_at, ref: `سداد${pay.purchase_id ? " (على فاتورة)" : ""}`, debit: Number(pay.amount), credit: 0, note: `${paymentMethodLabel(pay.method)}${pay.account_name ? " · " + pay.account_name : ""}${pay.notes ? " · " + pay.notes : ""}` });
       list.sort((a, b) => a.date.localeCompare(b.date)); return list;

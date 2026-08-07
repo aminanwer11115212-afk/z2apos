@@ -52,8 +52,11 @@ function CustomerStatement() {
       const list: Row[] = [];
       for (const s of salesRes.data ?? []) {
         const net = Number(s.total) - Number(s.discount);
+        // Deliberately unclamped: if an admin edits sales.paid below the recorded
+        // payments, the negative shows as a reversal and the statement still
+        // reconciles with customers.balance instead of silently drifting.
         const paidAtSale = Number(s.paid) - (linkedToSale.get(s.id) ?? 0);
-        list.push({ kind: "sale", id: s.id, date: s.created_at, ref: `فاتورة #${s.invoice_no}`, debit: net, credit: Math.max(0, paidAtSale), note: s.notes ?? "" });
+        list.push({ kind: "sale", id: s.id, date: s.created_at, ref: `فاتورة #${s.invoice_no}`, debit: net, credit: paidAtSale, note: s.notes ?? "" });
       }
       for (const p of paymentsRes.data ?? []) {
         list.push({ kind: "payment", id: p.id, date: p.created_at, ref: `دفعة${p.sale_id ? " (على فاتورة)" : ""}`, debit: 0, credit: Number(p.amount), note: `${paymentMethodLabel(p.method)}${p.account_name ? " · " + p.account_name : ""}${p.notes ? " · " + p.notes : ""}` });
