@@ -77,8 +77,10 @@ const DEFAULTS: Settings = {
     wallet: { enabled: true, defaultAccountId: "okash", requireRef: false },
   },
   defaultMethod: "cash",
-  waInvoiceTemplate: "السلام عليكم {name}،\nفاتورتك رقم {invoice} بمبلغ {total} — المتبقي {due}.\nشكراً لتعاملك مع {store}.",
-  waReminderTemplate: "السلام عليكم {name}،\nتذكير: عليك مبلغ متبقٍ قدره {balance}.\nنرجو السداد في أقرب فرصة.\n{store}",
+  waInvoiceTemplate:
+    "السلام عليكم {name}،\nفاتورتك رقم {invoice} بمبلغ {total} — المتبقي {due}.\nشكراً لتعاملك مع {store}.",
+  waReminderTemplate:
+    "السلام عليكم {name}،\nتذكير: عليك مبلغ متبقٍ قدره {balance}.\nنرجو السداد في أقرب فرصة.\n{store}",
   sellerPerms: {
     seeCost: false,
     editPrice: true,
@@ -110,20 +112,31 @@ function load(): Settings {
       },
       defaultMethod: parsed.defaultMethod ?? DEFAULTS.defaultMethod,
     };
-  } catch { return DEFAULTS; }
+  } catch {
+    return DEFAULTS;
+  }
 }
 
-export function getSettings(): Settings { return cache; }
+export function getSettings(): Settings {
+  return cache;
+}
 
 export function saveSettings(patch: Partial<Settings>) {
   cache = { ...cache, ...patch };
-  try { localStorage.setItem(KEY, JSON.stringify(cache)); } catch { /* noop */ }
+  try {
+    localStorage.setItem(KEY, JSON.stringify(cache));
+  } catch {
+    /* noop */
+  }
   listeners.forEach((l) => l());
 }
 
 export function useSettings(): Settings {
   return useSyncExternalStore(
-    (cb) => { listeners.add(cb); return () => listeners.delete(cb); },
+    (cb) => {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
     () => cache,
     () => DEFAULTS,
   );
@@ -135,8 +148,47 @@ export function computeTax(net: number, s: Settings) {
   return { amount, grand: net + amount };
 }
 
+/** Row shape shared by every saved-sale total calculation. */
+export type SaleTotals = {
+  total: number | string;
+  discount?: number | string | null;
+  tax_amount?: number | string | null;
+};
+
+/**
+ * Totals of a *saved* sale. Always reads `tax_amount` as stored on the invoice
+ * instead of recomputing from current settings: the balance trigger uses the
+ * stored value, and changing the tax rate must not rewrite historical invoices.
+ */
+export function saleTotals(s: SaleTotals) {
+  const net = Number(s.total) - Number(s.discount ?? 0);
+  const tax = Number(s.tax_amount ?? 0);
+  return { net, tax, grand: net + tax };
+}
+
+/** Outstanding amount on a saved sale — mirrors apply_sale_balance exactly. */
+export function saleDue(s: SaleTotals & { paid: number | string }) {
+  return saleTotals(s).grand - Number(s.paid);
+}
+
 export function formatInvoiceNo(n: number | string, s: Settings) {
   return `${s.invoicePrefix || ""}${n}`;
+}
+
+/**
+ * Alert threshold for a part: its own `min_quantity`, falling back to the
+ * store-wide default when the part has none set.
+ */
+export function lowStockThreshold(minQuantity: number | string | null | undefined, s: Settings) {
+  const own = Number(minQuantity ?? 0);
+  return own > 0 ? own : s.lowStockDefault;
+}
+
+export function isLowStock(
+  p: { quantity: number | string; min_quantity?: number | string | null },
+  s: Settings,
+) {
+  return Number(p.quantity) <= lowStockThreshold(p.min_quantity, s);
 }
 
 export function renderTemplate(tpl: string, vars: Record<string, string>): string {
@@ -151,7 +203,11 @@ export function encodeNotes(accountName: string, notes: string, ref?: string): s
   const accPart = `[حساب:${accountName}]`;
   return [accPart, refPart, clean].filter(Boolean).join(" ");
 }
-export function parseNotes(notes: string | null | undefined): { account: string | null; ref: string | null; text: string } {
+export function parseNotes(notes: string | null | undefined): {
+  account: string | null;
+  ref: string | null;
+  text: string;
+} {
   if (!notes) return { account: null, ref: null, text: "" };
   const acc = notes.match(ACC_RE)?.[1]?.trim() ?? null;
   const ref = notes.match(REF_RE)?.[1]?.trim() ?? null;

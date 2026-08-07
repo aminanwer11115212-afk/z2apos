@@ -2,8 +2,21 @@ import { createFileRoute, Outlet, redirect, Link, useRouterState } from "@tansta
 import { supabase } from "@/integrations/supabase/client";
 import { useMyRole, useSession, useSignOut } from "@/lib/auth";
 import {
-  LayoutDashboard, Package, ShoppingCart, Truck, Users, Building2, BarChart3,
-  UserCog, LogOut, Menu, Database, Settings as SettingsIcon, ChevronDown, Zap, Wallet
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  Truck,
+  Users,
+  Building2,
+  BarChart3,
+  UserCog,
+  LogOut,
+  Menu,
+  Database,
+  Settings as SettingsIcon,
+  ChevronDown,
+  Zap,
+  Wallet,
 } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "@/components/Logo";
@@ -14,7 +27,11 @@ export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
     const { data } = await supabase.auth.getUser();
     if (!data.user) throw redirect({ to: "/auth" });
-    try { await supabase.rpc("bootstrap_first_admin"); } catch { /* ignore */ }
+    try {
+      await supabase.rpc("bootstrap_first_admin");
+    } catch {
+      /* ignore */
+    }
     return { userId: data.user.id };
   },
   component: AuthedLayout,
@@ -80,15 +97,18 @@ function AuthedLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const isAdmin = role === "admin";
 
-  const visibleGroups = GROUPS
-    .filter((g) => !g.adminOnly || isAdmin)
+  const visibleGroups = GROUPS.filter((g) => !g.adminOnly || isAdmin)
     .map((g) => ({ ...g, items: g.items.filter((i) => !i.adminOnly || isAdmin) }))
     .filter((g) => g.items.length > 0);
 
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 h-14 bg-card border-b flex items-center px-4 gap-3">
-        <button onClick={() => setMobileOpen(true)} className="lg:hidden p-2 -mr-2" aria-label="القائمة">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="lg:hidden p-2 -mr-2"
+          aria-label="القائمة"
+        >
           <Menu className="w-5 h-5" />
         </button>
         <div className="flex items-center gap-2">
@@ -127,7 +147,13 @@ function AuthedLayout() {
               <nav className="p-3 space-y-1">
                 <NavLink item={HOME} path={path} onClick={() => setMobileOpen(false)} />
                 {visibleGroups.map((g) => (
-                  <SidebarGroup key={g.label} group={g} path={path} onNavigate={() => setMobileOpen(false)} defaultOpen />
+                  <SidebarGroup
+                    key={g.label}
+                    group={g}
+                    path={path}
+                    onNavigate={() => setMobileOpen(false)}
+                    defaultOpen
+                  />
                 ))}
               </nav>
             </aside>
@@ -143,7 +169,11 @@ function AuthedLayout() {
         {MOBILE_NAV.map((n) => {
           const active = path === n.to || (n.to !== "/dashboard" && path.startsWith(n.to));
           return (
-            <Link key={n.to} to={n.to} className={`flex-1 flex flex-col items-center justify-center gap-1 text-xs ${active ? "text-primary" : "text-muted-foreground"}`}>
+            <Link
+              key={n.to}
+              to={n.to}
+              className={`flex-1 flex flex-col items-center justify-center gap-1 text-xs ${active ? "text-primary" : "text-muted-foreground"}`}
+            >
               <n.Icon className="w-5 h-5" />
               {n.label}
             </Link>
@@ -157,21 +187,38 @@ function AuthedLayout() {
 function NavLink({ item, path, onClick }: { item: NavItem; path: string; onClick?: () => void }) {
   const active = path === item.to || (item.to !== "/dashboard" && path.startsWith(item.to));
   return (
-    <Link to={item.to} onClick={onClick}
-      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium ${active ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
+    <Link
+      to={item.to}
+      onClick={onClick}
+      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium ${active ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+    >
       <item.Icon className="w-4 h-4" />
       {item.label}
     </Link>
   );
 }
 
-function SidebarGroup({ group, path, onNavigate, defaultOpen }: { group: NavGroup; path: string; onNavigate?: () => void; defaultOpen?: boolean }) {
-  const anyActive = group.items.some((i) => path === i.to || (i.to !== "/dashboard" && path.startsWith(i.to)));
+function SidebarGroup({
+  group,
+  path,
+  onNavigate,
+  defaultOpen,
+}: {
+  group: NavGroup;
+  path: string;
+  onNavigate?: () => void;
+  defaultOpen?: boolean;
+}) {
+  const anyActive = group.items.some(
+    (i) => path === i.to || (i.to !== "/dashboard" && path.startsWith(i.to)),
+  );
   const [open, setOpen] = useState(defaultOpen ?? anyActive);
   return (
     <div className="pt-2">
-      <button onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground hover:text-foreground">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground hover:text-foreground"
+      >
         <span>{group.label}</span>
         <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>

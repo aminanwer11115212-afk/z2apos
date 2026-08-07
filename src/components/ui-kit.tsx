@@ -1,8 +1,18 @@
 import { useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 
-export function Modal({ open, onClose, title, children, footer }: {
-  open: boolean; onClose: () => void; title: string; children: ReactNode; footer?: ReactNode;
+export function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  footer,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+  footer?: ReactNode;
 }) {
   if (!open) return null;
   return (
@@ -11,10 +21,16 @@ export function Modal({ open, onClose, title, children, footer }: {
       <div className="relative bg-card w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl border shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-card flex items-center justify-between p-4 border-b">
           <h2 className="font-bold text-lg">{title}</h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-muted"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-muted">
+            <X className="w-5 h-5" />
+          </button>
         </div>
         <div className="p-4">{children}</div>
-        {footer && <div className="sticky bottom-0 bg-card border-t p-4 flex gap-2 justify-end">{footer}</div>}
+        {footer && (
+          <div className="sticky bottom-0 bg-card border-t p-4 flex gap-2 justify-end">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -30,24 +46,53 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 }
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={`w-full h-11 px-3 rounded-lg border bg-background ${props.className ?? ""}`} />;
+  return (
+    <input
+      {...props}
+      className={`w-full h-11 px-3 rounded-lg border bg-background ${props.className ?? ""}`}
+    />
+  );
 }
 
 export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...props} className={`w-full px-3 py-2 rounded-lg border bg-background ${props.className ?? ""}`} />;
+  return (
+    <textarea
+      {...props}
+      className={`w-full px-3 py-2 rounded-lg border bg-background ${props.className ?? ""}`}
+    />
+  );
 }
 
-export function Btn({ variant = "primary", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "ghost" | "danger" | "outline" }) {
+export function Btn({
+  variant = "primary",
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: "primary" | "ghost" | "danger" | "outline";
+}) {
   const v = {
     primary: "bg-primary text-primary-foreground hover:opacity-90",
     outline: "border bg-card hover:bg-muted",
     ghost: "hover:bg-muted",
     danger: "bg-destructive text-destructive-foreground hover:opacity-90",
   }[variant];
-  return <button type="button" {...props} className={`h-10 px-4 rounded-lg font-medium disabled:opacity-50 ${v} ${props.className ?? ""}`} />;
+  return (
+    <button
+      type="button"
+      {...props}
+      className={`h-10 px-4 rounded-lg font-medium disabled:opacity-50 ${v} ${props.className ?? ""}`}
+    />
+  );
 }
 
-export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
+export function PageHeader({
+  title,
+  subtitle,
+  actions,
+}: {
+  title: string;
+  subtitle?: string;
+  actions?: ReactNode;
+}) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
       <div>
@@ -59,11 +104,22 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
   );
 }
 
-export function SearchBar({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+export function SearchBar({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
   return (
-    <input value={value} onChange={(e) => onChange(e.target.value)}
+    <input
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder ?? "بحث..."}
-      className="w-full h-11 px-4 rounded-lg border bg-card" />
+      className="w-full h-11 px-4 rounded-lg border bg-card"
+    />
   );
 }
 

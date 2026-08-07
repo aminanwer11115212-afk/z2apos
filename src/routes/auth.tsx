@@ -42,10 +42,14 @@ function AuthPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 relative">
-      <div className="absolute top-3 left-3"><ThemeToggle /></div>
+      <div className="absolute top-3 left-3">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="mx-auto flex items-center justify-center"><Logo className="h-28 w-auto" /></div>
+          <div className="mx-auto flex items-center justify-center">
+            <Logo className="h-28 w-auto" />
+          </div>
           <h1 className="mt-2 text-2xl font-bold">نظام 2A</h1>
           <p className="text-sm text-muted-foreground">إدارة قطع غيار السيارات</p>
         </div>
@@ -53,15 +57,30 @@ function AuthPage() {
         <form onSubmit={submit} className="bg-card border rounded-2xl p-6 shadow-sm space-y-4">
           <div>
             <label className="block text-sm mb-1 font-medium">البريد الإلكتروني</label>
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-              dir="ltr" className="w-full h-11 px-3 rounded-lg border bg-background text-right" />
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              dir="ltr"
+              className="w-full h-11 px-3 rounded-lg border bg-background text-right"
+            />
           </div>
           <div>
             <label className="block text-sm mb-1 font-medium">كلمة المرور</label>
-            <input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)}
-              className="w-full h-11 px-3 rounded-lg border bg-background" />
+            <input
+              type="password"
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full h-11 px-3 rounded-lg border bg-background"
+            />
           </div>
-          <button disabled={loading} className="w-full h-11 rounded-lg bg-primary text-primary-foreground font-semibold disabled:opacity-60">
+          <button
+            disabled={loading}
+            className="w-full h-11 rounded-lg bg-primary text-primary-foreground font-semibold disabled:opacity-60"
+          >
             {loading ? "جارٍ..." : "دخول"}
           </button>
           <p className="text-xs text-center text-muted-foreground">
