@@ -2,6 +2,7 @@ import { useState, type Dispatch, type SetStateAction, type RefObject } from "re
 import { HeldSale, loadHeld, saveHeld, type PosLine } from "@/lib/pos";
 import { toast } from "sonner";
 import type { PaymentMethod } from "@/lib/payments";
+import type { PriceMode } from "@/lib/parts";
 
 type UsePosHeldArgs = {
   // Current draft — captured verbatim when the sale is put on hold, so that
@@ -14,6 +15,7 @@ type UsePosHeldArgs = {
   paymentMethod: PaymentMethod;
   bankAccountId: string;
   txRef: string;
+  priceMode: PriceMode;
   setLines: Dispatch<SetStateAction<PosLine[]>>;
   setCustomerId: Dispatch<SetStateAction<string>>;
   setDiscount: Dispatch<SetStateAction<number>>;
@@ -22,6 +24,7 @@ type UsePosHeldArgs = {
   setPaymentMethod: Dispatch<SetStateAction<PaymentMethod>>;
   setBankAccountId: Dispatch<SetStateAction<string>>;
   setTxRef: Dispatch<SetStateAction<string>>;
+  setPriceMode: (m: PriceMode) => void;
   searchRef: RefObject<HTMLInputElement | null>;
 };
 
@@ -34,6 +37,7 @@ export function usePosHeld({
   paymentMethod,
   bankAccountId,
   txRef,
+  priceMode,
   setLines,
   setCustomerId,
   setDiscount,
@@ -42,6 +46,7 @@ export function usePosHeld({
   setPaymentMethod,
   setBankAccountId,
   setTxRef,
+  setPriceMode,
   searchRef,
 }: UsePosHeldArgs) {
   const [held, setHeld] = useState<HeldSale[]>(() => loadHeld());
@@ -60,6 +65,7 @@ export function usePosHeld({
       paymentMethod,
       bankAccountId,
       txRef,
+      priceMode,
     };
     const nx = [entry, ...held].slice(0, 20);
     setHeld(nx);
@@ -83,6 +89,7 @@ export function usePosHeld({
     setPaymentMethod(h.paymentMethod);
     if (h.bankAccountId) setBankAccountId(h.bankAccountId);
     setTxRef(h.txRef ?? "");
+    setPriceMode(h.priceMode ?? "retail");
     const nx = held.filter((x) => x.id !== h.id);
     setHeld(nx);
     saveHeld(nx);

@@ -173,6 +173,54 @@ function SettingsPage() {
               }
             />
           </Field>
+          <Field label="عنوان الفاتورة">
+            <Input
+              value={s.invoiceTitle}
+              onChange={(e) => saveSettings({ invoiceTitle: e.target.value })}
+              placeholder="فاتورة / فاتورة مبدئية"
+            />
+          </Field>
+          <Field label="صفوف فارغة في جدول A4">
+            <Input
+              type="number"
+              min={0}
+              max={30}
+              value={s.invoiceMinRows}
+              onChange={(e) =>
+                saveSettings({
+                  invoiceMinRows: Math.max(0, Math.min(30, Number(e.target.value) || 0)),
+                })
+              }
+            />
+          </Field>
+          <Field label="خيارات الفاتورة">
+            <div className="flex flex-col gap-2 py-1">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={s.showSignature}
+                  onChange={(e) => saveSettings({ showSignature: e.target.checked })}
+                />
+                <span>خانات التوقيع</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={s.showItemCode}
+                  onChange={(e) => saveSettings({ showItemCode: e.target.checked })}
+                />
+                <span>عمود الكود</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={s.showLogo}
+                  onChange={(e) => saveSettings({ showLogo: e.target.checked })}
+                />
+                <span>شعار المتجر</span>
+              </label>
+            </div>
+          </Field>
         </div>
       </Section>
 

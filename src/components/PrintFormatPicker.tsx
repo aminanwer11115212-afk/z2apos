@@ -16,12 +16,29 @@ const FORMAT_CLASSES = ["print-format-a4", "print-format-thermal80", "print-form
  * Lets the user choose the paper format from the invoice itself, overriding
  * the default from settings for a single print run.
  *
+ * Usable uncontrolled (`initial`) or controlled (`value` + `onChange`) — the
+ * invoice page controls it so the rendered document matches the chosen paper,
+ * not just the print stylesheet.
+ *
  * This component owns the body class outright: it clears every format class on
  * unmount, so a thermal choice can't leak onto pages printed later (statements,
  * reports, barcode labels), which all rely on the A4 fallback rule.
  */
-export function PrintFormatPicker({ initial = "a4" }: { initial?: PrintFormat }) {
-  const [fmt, setFmt] = useState<PrintFormat>(initial);
+export function PrintFormatPicker({
+  initial = "a4",
+  value,
+  onChange,
+}: {
+  initial?: PrintFormat;
+  value?: PrintFormat;
+  onChange?: (f: PrintFormat) => void;
+}) {
+  const [inner, setInner] = useState<PrintFormat>(initial);
+  const fmt = value ?? inner;
+  const setFmt = (f: PrintFormat) => {
+    setInner(f);
+    onChange?.(f);
+  };
 
   useEffect(() => {
     document.body.classList.remove(...FORMAT_CLASSES);

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { PosPart } from "@/lib/pos";
+import { unitPriceFor, type PriceMode } from "@/lib/parts";
 import { formatSDG } from "@/lib/auth";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo } from "react";
@@ -10,10 +11,12 @@ export function PosProductGrid({
   parts,
   q,
   onAdd,
+  priceMode = "retail",
 }: {
   parts: PosPart[];
   q: string;
   onAdd: (p: PosPart) => void;
+  priceMode?: PriceMode;
 }) {
   const [page, setPage] = useState(1);
   const prevQ = useRef(q);
@@ -71,7 +74,7 @@ export function PosProductGrid({
                       متوفر: {Number(p.quantity)}
                     </span>
                     <span className="text-sm font-semibold text-primary">
-                      {formatSDG(p.sell_price)}
+                      {formatSDG(unitPriceFor(p, priceMode))}
                     </span>
                   </div>
                 </button>

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
+import type { PrintFormat } from "@/lib/settings";
 import {
   useSettings,
   parseNotes,
@@ -10,13 +11,13 @@ import {
   formatInvoiceNo,
   renderTemplate,
 } from "@/lib/settings";
-import { paymentMethodLabel, paymentMethodIcon } from "@/lib/payments";
 import { whatsappUrl } from "@/lib/utils";
 import { Btn } from "@/components/ui-kit";
+import { InvoiceDocument } from "@/components/InvoiceDocument";
+import type { InvoiceDoc } from "@/lib/invoice";
 import { PaymentDialog } from "@/components/PaymentDialog";
 import { EditInvoiceDialog } from "@/components/EditInvoiceDialog";
 import { PrintFormatPicker } from "@/components/PrintFormatPicker";
-import { Logo } from "@/components/Logo";
 import { ArrowRight, Wallet, MessageCircle, Pencil, ExternalLink } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/sales/$id")({
@@ -72,6 +73,9 @@ function SaleView() {
   const { id } = Route.useParams();
   const settings = useSettings();
   const [payOpen, setPayOpen] = useState(false);
+  // The picker overrides the stored default for this print run, and the document
+  // re-renders in that format (thermal drops the code column and filler rows).
+  const [format, setFormat] = useState<PrintFormat>(settings.printFormat);
   const [editOpen, setEditOpen] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ["sale", id],
@@ -95,9 +99,35 @@ function SaleView() {
   const { net, tax, grand } = saleTotals(data);
   const due = grand - Number(data.paid);
   const parsed = parseNotes(data.notes);
-  const isThermal = settings.printFormat !== "a4";
-  const containerMax = isThermal ? "max-w-sm" : "max-w-3xl";
-  const invoiceLabel = formatInvoiceNo(data.invoice_no, settings);
+  const doc: InvoiceDoc = {
+    invoiceLabel: formatInvoiceNo(data.invoice_no, settings),
+    date: data.created_at,
+    customerName: data.customers?.name ?? "نقدي",
+    customerPhone: data.customers?.phone ?? null,
+    items: data.sale_items.map((it) => ({
+      id: it.id,
+      name: it.parts?.name ?? "—",
+      code: it.parts?.code ?? null,
+      qty: Number(it.qty),
+      unit_price: Number(it.unit_price),
+      subtotal: Number(it.subtotal),
+    })),
+    total: Number(data.total),
+    discount: Number(data.discount),
+    tax,
+    net,
+    grand,
+    paid: Number(data.paid),
+    due,
+    paymentMethod: data.payment_method,
+    accountName: data.account_name ?? parsed.account,
+    txRef: parsed.ref,
+    notes: parsed.text,
+    customerBalance: data.customers ? Number(data.customers.balance) : null,
+  };
+  const isThermal = format !== "a4";
+  const containerMax = isThermal ? "max-w-sm" : "max-w-4xl";
+  const invoiceLabel = doc.invoiceLabel;
 
   const shareWhatsApp = () => {
     const phone = data.customers?.phone;
@@ -153,150 +183,19 @@ function SaleView() {
               واتساب
             </Btn>
           )}
-          <PrintFormatPicker initial={settings.printFormat} />
+          <PrintFormatPicker value={format} onChange={setFormat} />
         </div>
       </div>
 
       {/* settings.printCopies: extra copies are screen-hidden and each starts a new sheet. */}
       {Array.from({ length: Math.max(1, Number(settings.printCopies) || 1) }, (_, copy) => (
         <div key={copy} className={copy > 0 ? "print-copy" : undefined}>
-          <div
-            className={`print-area bg-card border rounded-2xl p-6 shadow-sm ${isThermal ? "text-xs" : ""}`}
-          >
-            <div className="flex flex-col items-center text-center gap-2 pb-3 border-b">
-              {settings.showLogo && (
-                <Logo variant="light" className={isThermal ? "h-12 w-auto" : "h-16 w-auto"} />
-              )}
-              <div className={`font-bold ${isThermal ? "text-base" : "text-2xl"}`}>
-                {settings.storeName || "نظام 2A"}
-              </div>
-              <div className="text-xs muted-print text-muted-foreground font-semibold tracking-wide">
-                فاتورة مبيعات
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 py-3 text-sm">
-              <div>
-                <div className="muted-print text-muted-foreground text-xs">رقم الفاتورة</div>
-                <div className="font-bold font-mono">{invoiceLabel}</div>
-              </div>
-              <div className="text-left">
-                <div className="muted-print text-muted-foreground text-xs">التاريخ</div>
-                <div className="font-semibold">
-                  {new Date(data.created_at).toLocaleString("ar-SD", {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
-                </div>
-              </div>
-              <div>
-                <div className="muted-print text-muted-foreground text-xs">العميل</div>
-                <div className="font-semibold">{data.customers?.name ?? "نقدي"}</div>
-                {data.customers?.phone && (
-                  <div className="text-xs muted-print text-muted-foreground">
-                    {data.customers.phone}
-                  </div>
-                )}
-              </div>
-              <div className="text-left">
-                {data.payment_method && (
-                  <>
-                    <div className="muted-print text-muted-foreground text-xs">طريقة الدفع</div>
-                    <div className="font-semibold">
-                      {paymentMethodIcon(data.payment_method)}{" "}
-                      {paymentMethodLabel(data.payment_method)}
-                      {(data.account_name || parsed.account) && (
-                        <span className="muted-print text-muted-foreground">
-                          {" "}
-                          — {data.account_name ?? parsed.account}
-                        </span>
-                      )}
-                    </div>
-                    {parsed.ref && (
-                      <div
-                        className="text-xs font-mono muted-print text-muted-foreground"
-                        dir="ltr"
-                      >
-                        #{parsed.ref}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-
-            <table className="w-full text-sm invoice-table" style={{ borderCollapse: "collapse" }}>
-              <thead className="bg-muted">
-                <tr>
-                  <th className="text-center p-2 font-semibold border w-10">#</th>
-                  <th className="text-right p-2 font-semibold border">الصنف</th>
-                  <th className="text-center p-2 font-semibold border w-24 hide-on-thermal">
-                    الكود
-                  </th>
-                  <th className="text-center p-2 font-semibold border w-16">الكمية</th>
-                  <th className="text-left p-2 font-semibold border w-28">السعر</th>
-                  <th className="text-left p-2 font-semibold border w-32">الإجمالي</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.sale_items.map((it, i) => (
-                  <tr key={it.id}>
-                    <td className="p-2 text-center border font-mono muted-print text-muted-foreground">
-                      {i + 1}
-                    </td>
-                    <td className="p-2 border">{it.parts?.name}</td>
-                    <td className="p-2 border text-center font-mono text-xs hide-on-thermal">
-                      {it.parts?.code ?? "—"}
-                    </td>
-                    <td className="p-2 border text-center">{it.qty}</td>
-                    <td className="p-2 border text-left">{formatSDG(Number(it.unit_price))}</td>
-                    <td className="p-2 border text-left font-semibold">
-                      {formatSDG(Number(it.subtotal))}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div className="flex justify-end mt-4">
-              <div className="w-full sm:w-72 text-sm space-y-1">
-                <Row label="الإجمالي" value={formatSDG(Number(data.total))} />
-                <Row label="الخصم" value={formatSDG(Number(data.discount))} />
-                <Row label="الصافي" value={formatSDG(net)} strong />
-                {tax > 0 && (
-                  <>
-                    <Row label="الضريبة" value={formatSDG(tax)} />
-                    <Row label="الإجمالي شامل الضريبة" value={formatSDG(grand)} strong />
-                  </>
-                )}
-                <Row label="المدفوع" value={formatSDG(Number(data.paid))} />
-                <Row label="المتبقي" value={formatSDG(due)} strong />
-              </div>
-            </div>
-
-            {parsed.text && (
-              <div className="mt-4 pt-3 border-t text-xs hide-on-thermal">
-                <span className="muted-print text-muted-foreground">ملاحظات: </span>
-                {parsed.text}
-              </div>
-            )}
-
-            <div className="mt-6 pt-3 border-t text-center text-[10px] leading-relaxed muted-print text-muted-foreground">
-              <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center">
-                {settings.storePhone && <span>📞 {settings.storePhone}</span>}
-                {settings.storeAddress && (
-                  <span className="hide-on-thermal">📍 {settings.storeAddress}</span>
-                )}
-                {settings.storeTaxNo && <span>الرقم الضريبي: {settings.storeTaxNo}</span>}
-              </div>
-              <div className="mt-1 font-medium">
-                {settings.invoiceFooter || "شكراً لتعاملكم معنا"}
-              </div>
-              <div className="mt-0.5 hide-on-thermal opacity-70">
-                نظام 2A — من تطوير أمين أنور أحمد
-              </div>
-            </div>
-          </div>
+          <InvoiceDocument
+            doc={doc}
+            settings={settings}
+            format={format}
+            copyLabel={copy > 0 ? `نسخة ${copy + 1}` : undefined}
+          />
         </div>
       ))}
 
@@ -330,15 +229,6 @@ function SaleView() {
           notes: data.notes,
         }}
       />
-    </div>
-  );
-}
-
-function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
-  return (
-    <div className={`flex justify-between py-1 ${strong ? "font-bold border-t pt-2" : ""}`}>
-      <span className="muted-print text-muted-foreground">{label}</span>
-      <span>{value}</span>
     </div>
   );
 }

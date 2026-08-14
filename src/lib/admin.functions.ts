@@ -275,13 +275,16 @@ export const adminSeedDemo = createServerFn({ method: "POST" })
     // 1) قطع الغيار — 1000
     const parts = Array.from({ length: 1000 }, (_, i) => {
       const cost = randInt(500, 15000);
+      const retail = Math.round(cost * (1.2 + Math.random() * 0.6));
       return {
         code: `P${(100000 + i).toString()}`,
         name: `${rand(PART_TEMPLATES)} — ${rand(CAR_TYPES)}`,
         category: rand(CATEGORIES),
         car_model: rand(CAR_TYPES),
         cost_price: cost,
-        sell_price: Math.round(cost * (1.2 + Math.random() * 0.6)),
+        sell_price: retail,
+        // سعر الجملة أقل من القطاعي بنسبة ٧-١٥٪
+        wholesale_price: Math.round(retail * (0.85 + Math.random() * 0.08)),
         quantity: 0, // سيرتفع من المشتريات
         min_quantity: randInt(1, 5),
       };

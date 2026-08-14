@@ -20,6 +20,8 @@ function NewSale() {
       onAdd={pos.addPart}
       lines={pos.lines}
       canEditPrice={pos.canEditPrice}
+      priceMode={pos.priceMode}
+      onPriceMode={pos.setPriceMode}
       onQty={pos.setQty}
       onPrice={pos.setPrice}
       onRemove={pos.remove}
