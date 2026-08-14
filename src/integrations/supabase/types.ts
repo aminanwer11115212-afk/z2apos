@@ -135,6 +135,7 @@ export type Database = {
           quantity: number
           sell_price: number
           updated_at: string
+          wholesale_price: number
         }
         Insert: {
           car_model?: string | null
@@ -149,6 +150,7 @@ export type Database = {
           quantity?: number
           sell_price?: number
           updated_at?: string
+          wholesale_price?: number
         }
         Update: {
           car_model?: string | null
@@ -163,6 +165,7 @@ export type Database = {
           quantity?: number
           sell_price?: number
           updated_at?: string
+          wholesale_price?: number
         }
         Relationships: []
       }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMyRole, formatSDG } from "@/lib/auth";
 import { useSettings, isLowStock } from "@/lib/settings";
+import { PART_SELECT, autoPartCode, type Part } from "@/lib/parts";
 import {
   Modal,
   Field,
@@ -14,25 +15,13 @@ import {
   EmptyState,
   useDialog,
 } from "@/components/ui-kit";
-import { Plus, Pencil, Trash2, AlertTriangle, Barcode as BarcodeIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, AlertTriangle, Barcode as BarcodeIcon, Table2 } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/parts")({
+export const Route = createFileRoute("/_authenticated/parts/")({
   head: () => ({ meta: [{ title: "قطع الغيار — 2A" }] }),
   component: PartsPage,
 });
-
-type Part = {
-  id: string;
-  code: string;
-  name: string;
-  category: string | null;
-  car_model: string | null;
-  cost_price: number;
-  sell_price: number;
-  quantity: number;
-  min_quantity: number;
-};
 
 const empty = {
   name: "",
@@ -40,15 +29,10 @@ const empty = {
   car_model: "",
   cost_price: 0,
   sell_price: 0,
+  wholesale_price: 0,
   quantity: 0,
   min_quantity: 0,
 };
-
-function autoCode() {
-  return `P${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 100)
-    .toString()
-    .padStart(2, "0")}`;
-}
 
 function PartsPage() {
   const qc = useQueryClient();
@@ -65,7 +49,7 @@ function PartsPage() {
   const { data = [], isLoading } = useQuery({
     queryKey: ["parts"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("parts").select("*").order("name");
+      const { data, error } = await supabase.from("parts").select(PART_SELECT).order("name");
       if (error) throw error;
       return data as Part[];
     },
@@ -79,6 +63,7 @@ function PartsPage() {
         car_model: form.car_model.trim() || null,
         cost_price: Number(form.cost_price),
         sell_price: Number(form.sell_price),
+        wholesale_price: Number(form.wholesale_price),
         quantity: Number(form.quantity),
         min_quantity: Number(form.min_quantity),
       };
@@ -86,7 +71,7 @@ function PartsPage() {
         const { error } = await supabase.from("parts").update(payload).eq("id", editing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("parts").insert({ ...payload, code: autoCode() });
+        const { error } = await supabase.from("parts").insert({ ...payload, code: autoPartCode() });
         if (error) throw error;
       }
     },
@@ -123,6 +108,7 @@ function PartsPage() {
       car_model: p.car_model ?? "",
       cost_price: p.cost_price,
       sell_price: p.sell_price,
+      wholesale_price: p.wholesale_price ?? 0,
       quantity: p.quantity,
       min_quantity: p.min_quantity,
     });
@@ -146,6 +132,14 @@ function PartsPage() {
         subtitle={`${data.length} صنف`}
         actions={
           <div className="flex gap-2">
+            {isAdmin && (
+              <Link to="/parts/bulk">
+                <Btn variant="outline">
+                  <Table2 className="w-4 h-4 inline ml-1" />
+                  إدارة جماعية
+                </Btn>
+              </Link>
+            )}
             <Link to="/parts/labels">
               <Btn variant="outline">
                 <BarcodeIcon className="w-4 h-4 inline ml-1" />
@@ -189,7 +183,8 @@ function PartsPage() {
                   {canSeeCost && (
                     <th className="text-right p-3 font-medium hidden lg:table-cell">سعر التكلفة</th>
                   )}
-                  <th className="text-right p-3 font-medium">سعر البيع</th>
+                  <th className="text-right p-3 font-medium">سعر القطاعي</th>
+                  <th className="text-right p-3 font-medium hidden sm:table-cell">سعر الجملة</th>
                   <th className="text-right p-3 font-medium">الكمية</th>
                   {isAdmin && <th className="p-3"></th>}
                 </tr>
@@ -212,6 +207,9 @@ function PartsPage() {
                         </td>
                       )}
                       <td className="p-3">{formatSDG(p.sell_price)}</td>
+                      <td className="p-3 hidden sm:table-cell text-muted-foreground">
+                        {Number(p.wholesale_price) > 0 ? formatSDG(p.wholesale_price) : "—"}
+                      </td>
                       <td className="p-3">
                         <span
                           className={`inline-flex items-center gap-1 ${low ? "text-destructive font-bold" : ""}`}
@@ -286,13 +284,21 @@ function PartsPage() {
               />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="سعر البيع">
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="سعر القطاعي">
               <Input
                 type="number"
                 step="0.01"
                 value={form.sell_price}
                 onChange={(e) => setForm({ ...form, sell_price: Number(e.target.value) })}
+              />
+            </Field>
+            <Field label="سعر الجملة">
+              <Input
+                type="number"
+                step="0.01"
+                value={form.wholesale_price}
+                onChange={(e) => setForm({ ...form, wholesale_price: Number(e.target.value) })}
               />
             </Field>
             <Field label="سعر التكلفة">

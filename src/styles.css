@@ -261,6 +261,49 @@
     padding: 6px 8px !important;
   }
 }
+/* ==================================================
+   Invoice sheet (.invoice-doc) — the printed template:
+   ruled table, dark hairlines, filler rows on A4 only.
+   Declared after the generic print rules so it wins on
+   equal specificity.
+   ================================================== */
+@media print {
+  .invoice-doc,
+  .invoice-doc * {
+    border-color: #0f172a !important;
+  }
+  .invoice-doc .invoice-table thead tr,
+  .invoice-doc .invoice-table tfoot tr {
+    background: #eef2f7 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .invoice-doc tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .invoice-doc .invoice-table thead {
+    display: table-header-group;
+  }
+  /* Rolls have no fixed sheet height — blank rows would just waste paper. */
+  body.print-format-thermal80 .invoice-doc .filler-row,
+  body.print-format-thermal58 .invoice-doc .filler-row {
+    display: none !important;
+  }
+  body.print-format-thermal80 .invoice-doc,
+  body.print-format-thermal58 .invoice-doc {
+    padding: 2px !important;
+  }
+  /* Keep the ruled look on thermal too, just thinner. */
+  body.print-format-thermal80 .invoice-doc .invoice-table th,
+  body.print-format-thermal80 .invoice-doc .invoice-table td,
+  body.print-format-thermal58 .invoice-doc .invoice-table th,
+  body.print-format-thermal58 .invoice-doc .invoice-table td {
+    border: 1px solid #0f172a !important;
+    padding: 2px 3px !important;
+  }
+}
+
 .print-only {
   display: none;
 }

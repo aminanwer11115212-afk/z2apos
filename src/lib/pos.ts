@@ -1,10 +1,12 @@
 import { type PaymentMethod } from "@/lib/payments";
+import type { PriceMode } from "@/lib/parts";
 
 export type PosPart = {
   id: string;
   code: string;
   name: string;
   sell_price: number;
+  wholesale_price: number;
   quantity: number;
 };
 export type PosLine = { part: PosPart; qty: number; unit_price: number };
@@ -20,6 +22,7 @@ export type HeldSale = {
   paymentMethod: PaymentMethod;
   bankAccountId?: string;
   txRef?: string;
+  priceMode?: PriceMode;
 };
 
 export const HOLD_KEY = "2a-held-sales";

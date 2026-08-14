@@ -6,6 +6,7 @@ import { PosCustomerDialog } from "./PosCustomerDialog";
 import { PosHeldDialog } from "./PosHeldDialog";
 import { Search, Keyboard, Play } from "lucide-react";
 import type { PosPart, PosLine, HeldSale } from "@/lib/pos";
+import type { PriceMode } from "@/lib/parts";
 import type { Settings } from "@/lib/settings";
 import type { PaymentMethod } from "@/lib/payments";
 
@@ -21,6 +22,8 @@ type PosLayoutProps = {
   onAdd: (p: PosPart) => void;
   lines: PosLine[];
   canEditPrice: boolean;
+  priceMode: PriceMode;
+  onPriceMode: (m: PriceMode) => void;
   onQty: (id: string, qty: number) => void;
   onPrice: (id: string, price: number) => void;
   onRemove: (id: string) => void;
@@ -73,6 +76,27 @@ export function PosLayout(props: PosLayoutProps) {
         title="بيع سريع"
         actions={
           <div className="flex items-center gap-2">
+            <div className="inline-flex rounded-lg border bg-card p-0.5" title="F3 للتبديل">
+              {(
+                [
+                  { v: "retail", label: "قطاعي" },
+                  { v: "wholesale", label: "جملة" },
+                ] as const
+              ).map((o) => (
+                <button
+                  key={o.v}
+                  type="button"
+                  onClick={() => props.onPriceMode(o.v)}
+                  className={`h-8 px-3 rounded-md text-xs font-medium transition-colors ${
+                    props.priceMode === o.v
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
             <button
               type="button"
               onClick={() => props.setHoldOpen(true)}
@@ -88,7 +112,7 @@ export function PosLayout(props: PosLayoutProps) {
             </button>
             <div className="hidden md:flex items-center gap-1 text-xs text-muted-foreground">
               <Keyboard className="w-3.5 h-3.5" />
-              <span>F2 بحث · F4 عميل · F6 حساب · F7 دفع · F8 تعليق · F9 حفظ</span>
+              <span>F2 بحث · F3 قطاعي/جملة · F4 عميل · F6 حساب · F7 دفع · F8 تعليق · F9 حفظ</span>
             </div>
           </div>
         }
@@ -113,7 +137,12 @@ export function PosLayout(props: PosLayoutProps) {
             )}
             <span className="text-xs text-muted-foreground shrink-0">{props.parts.length} صنف</span>
           </div>
-          <PosProductGrid parts={props.parts} q={props.q} onAdd={props.onAdd} />
+          <PosProductGrid
+            parts={props.parts}
+            q={props.q}
+            onAdd={props.onAdd}
+            priceMode={props.priceMode}
+          />
           <PosCart
             lines={props.lines}
             parts={props.parts}

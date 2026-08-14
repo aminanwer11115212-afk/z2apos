@@ -6,6 +6,7 @@ import { useMyRole } from "@/lib/auth";
 import { useSettings, encodeNotes, computeTax } from "@/lib/settings";
 import { type PaymentMethod } from "@/lib/payments";
 import { PosPart, PosLine } from "@/lib/pos";
+import { unitPriceFor, type PriceMode } from "@/lib/parts";
 import { usePosCustomerDialog } from "@/components/PosCustomerDialog";
 import { usePosHeld } from "./usePosHeld";
 import { toast } from "sonner";
@@ -41,6 +42,9 @@ export function usePos() {
 
   const [q, setQ] = useState("");
   const [lines, setLines] = useState<PosLine[]>([]);
+  // قطاعي / جملة — drives the price used when a part is added, and repricing
+  // the whole cart when the seller switches mid-invoice.
+  const [priceMode, setPriceMode] = useState<PriceMode>("retail");
   const [customerId, setCustomerId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(initialMethod);
   const [bankAccountId, setBankAccountId] = useState(
@@ -65,6 +69,7 @@ export function usePos() {
     paymentMethod,
     bankAccountId,
     txRef,
+    priceMode,
     setLines,
     setCustomerId,
     setDiscount,
@@ -73,6 +78,7 @@ export function usePos() {
     setPaymentMethod,
     setBankAccountId,
     setTxRef,
+    setPriceMode,
     searchRef,
   });
 
@@ -90,7 +96,7 @@ export function usePos() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("parts")
-        .select("id,code,name,sell_price,quantity")
+        .select("id,code,name,sell_price,wholesale_price,quantity")
         .order("name");
       if (error) throw error;
       return data as PosPart[];
@@ -124,7 +130,7 @@ export function usePos() {
         nx[i] = { ...nx[i], qty: nx[i].qty + 1 };
         return nx;
       }
-      return [...prev, { part: p, qty: 1, unit_price: Number(p.sell_price) }];
+      return [...prev, { part: p, qty: 1, unit_price: unitPriceFor(p, priceMode) }];
     });
   };
   const setQty = (id: string, qty: number) => {
@@ -138,6 +144,19 @@ export function usePos() {
       p.map((l) => (l.part.id === id ? { ...l, unit_price: Math.max(0, price) } : l)),
     );
   const remove = (id: string) => setLines((p) => p.filter((l) => l.part.id !== id));
+
+  /** Switching the pricing mode re-prices every line that still sits at the
+   *  catalogue price of the previous mode; manually edited prices are kept. */
+  const selectPriceMode = (m: PriceMode) => {
+    setPriceMode(m);
+    setLines((prev) =>
+      prev.map((l) => {
+        const previous = unitPriceFor(l.part, priceMode);
+        if (Math.abs(l.unit_price - previous) > 0.005) return l;
+        return { ...l, unit_price: unitPriceFor(l.part, m) };
+      }),
+    );
+  };
 
   const total = lines.reduce((s, l) => s + l.qty * l.unit_price, 0);
   const maxDiscount = total * (maxDiscPct / 100);
@@ -238,6 +257,9 @@ export function usePos() {
     } else if (e.key === "F8") {
       e.preventDefault();
       held.hold();
+    } else if (e.key === "F3") {
+      e.preventDefault();
+      selectPriceMode(priceMode === "retail" ? "wholesale" : "retail");
     } else if (!inField && (e.key === "+" || e.key === "=")) {
       const last = lines[lines.length - 1];
       if (last) {
@@ -294,6 +316,8 @@ export function usePos() {
     notes,
     setNotes,
     total,
+    priceMode,
+    setPriceMode: selectPriceMode,
     settings,
     isSeller,
     accounts: settings.accounts,

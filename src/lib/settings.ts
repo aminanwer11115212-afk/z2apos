@@ -25,6 +25,11 @@ export type Settings = {
   storeAddress: string;
   storeTaxNo: string;
   invoiceFooter: string;
+  // Invoice document
+  invoiceTitle: string; // العنوان الكبير أعلى الفاتورة
+  invoiceMinRows: number; // صفوف فارغة تُكمل جدول A4
+  showSignature: boolean; // خانتا التوقيع أسفل الفاتورة
+  showItemCode: boolean; // عمود الكود داخل الجدول
   // Print
   printFormat: PrintFormat;
   printCopies: number;
@@ -56,6 +61,10 @@ const DEFAULTS: Settings = {
   storeAddress: "",
   storeTaxNo: "",
   invoiceFooter: "شكراً لتعاملكم معنا",
+  invoiceTitle: "فاتورة",
+  invoiceMinRows: 10,
+  showSignature: true,
+  showItemCode: true,
   printFormat: "a4",
   printCopies: 1,
   showLogo: true,
