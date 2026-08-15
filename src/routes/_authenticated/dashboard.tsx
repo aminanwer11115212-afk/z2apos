@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
 import { useSettings, isLowStock } from "@/lib/settings";
+import { dayKey, localISODate, startOfToday, addDays } from "@/lib/dates";
 import { Package, ShoppingCart, AlertTriangle, Users, TrendingUp, Wallet } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
@@ -19,10 +20,8 @@ function Dashboard() {
   const stats = useQuery({
     queryKey: ["dashboard-stats", settings.lowStockDefault],
     queryFn: async () => {
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const weekStart = new Date(today);
-      weekStart.setDate(today.getDate() - 6);
+      const today = startOfToday();
+      const weekStart = addDays(today, -6);
       const iso = (d: Date) => d.toISOString();
       const [
         { data: weekSales },
@@ -44,8 +43,10 @@ function Dashboard() {
           .order("quantity")
           .limit(50),
       ]);
-      const todayIso = today.toISOString().slice(0, 10);
-      const todaySalesArr = (weekSales ?? []).filter((r) => r.created_at.slice(0, 10) === todayIso);
+      // Bucket by the *local* calendar day: slicing the stored UTC string would
+      // push every evening sale (UTC+2 and east of it) into tomorrow.
+      const todayIso = localISODate(today);
+      const todaySalesArr = (weekSales ?? []).filter((r) => dayKey(r.created_at) === todayIso);
       const todaySales = todaySalesArr.reduce(
         (s, r) => s + Number(r.total) - Number(r.discount) + Number(r.tax_amount ?? 0),
         0,
@@ -53,11 +54,10 @@ function Dashboard() {
       const lowStock = (parts ?? []).filter((p) => isLowStock(p, settings)).length;
       const days: { day: string; total: number }[] = [];
       for (let i = 6; i >= 0; i--) {
-        const d = new Date(today);
-        d.setDate(today.getDate() - i);
-        const key = d.toISOString().slice(0, 10);
+        const d = addDays(today, -i);
+        const key = localISODate(d);
         const total = (weekSales ?? [])
-          .filter((r) => r.created_at.slice(0, 10) === key)
+          .filter((r) => dayKey(r.created_at) === key)
           .reduce(
             (s, r) => s + Number(r.total) - Number(r.discount) + Number(r.tax_amount ?? 0),
             0,

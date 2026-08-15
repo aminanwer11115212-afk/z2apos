@@ -6,6 +6,7 @@ import { formatSDG } from "@/lib/auth";
 import { PageHeader, Field, Input, Btn } from "@/components/ui-kit";
 import { Logo } from "@/components/Logo";
 import { paymentMethodLabel } from "@/lib/payments";
+import { localISODate, rangeToInstants } from "@/lib/dates";
 import { Printer, Download, FileSpreadsheet } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -19,7 +20,8 @@ type Preset = "today" | "yesterday" | "week" | "month" | "year" | "custom";
 function rangeFor(preset: Preset, from: string, to: string): { from: string; to: string } {
   const t = new Date();
   t.setHours(0, 0, 0, 0);
-  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  // Local calendar, not UTC — see lib/dates.
+  const iso = localISODate;
   if (preset === "today") return { from: iso(t), to: iso(t) };
   if (preset === "yesterday") {
     const y = new Date(t);
@@ -63,7 +65,7 @@ function downloadCSV(name: string, rows: (string | number)[][]) {
 }
 
 function Reports() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISODate();
   const monthStart = today.slice(0, 8) + "01";
   const [preset, setPreset] = useState<Preset>("month");
   const [from, setFrom] = useState(monthStart);
@@ -96,8 +98,7 @@ function Reports() {
   const { data } = useQuery({
     queryKey: ["reports", range, sellerId, customerId, category],
     queryFn: async () => {
-      const start = new Date(range.from + "T00:00:00").toISOString();
-      const end = new Date(range.to + "T23:59:59").toISOString();
+      const { start, end } = rangeToInstants(range.from, range.to);
 
       let salesQ = supabase
         .from("sales")

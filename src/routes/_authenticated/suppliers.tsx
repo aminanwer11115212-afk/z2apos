@@ -15,6 +15,7 @@ import {
 } from "@/components/ui-kit";
 import { PaymentDialog } from "@/components/PaymentDialog";
 import { Plus, Pencil, Trash2, Wallet, MessageCircle } from "lucide-react";
+import { dbErrorMessage } from "@/lib/db-errors";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/suppliers")({
@@ -68,7 +69,7 @@ function SuppliersPage() {
   const del = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("suppliers").delete().eq("id", id);
-      if (error) throw error;
+      if (error) throw new Error(dbErrorMessage(error, "تعذّر حذف المورد"));
     },
     onSuccess: () => {
       toast.success("تم الحذف");

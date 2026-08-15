@@ -45,10 +45,34 @@ export function unitPriceFor(
   return wholesale > 0 ? wholesale : retail;
 }
 
-export function autoPartCode() {
-  return `P${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 100)
-    .toString()
-    .padStart(2, "0")}`;
+// Codes stay digits-only so barcode scanners and CODE128 labels stay happy.
+let codeSeq = Math.floor(Math.random() * 10000);
+
+/**
+ * Unique part code. The counter — not randomness — is what makes a *batch*
+ * safe: inserting 200 rows inside the same millisecond used to draw from only
+ * 100 random suffixes, so the unique index on `code` rejected the insert.
+ */
+export function autoPartCode(): string {
+  codeSeq = (codeSeq + 1) % 10000;
+  return `P${Date.now().toString().slice(-9)}${codeSeq.toString().padStart(4, "0")}`;
+}
+
+/** Arabic-Indic (٠-٩) and Persian (۰-۹) digits → ASCII, for numeric inputs. */
+export function normalizeDigits(v: string): string {
+  return v
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/[\u066b]/g, ".")
+    .replace(/[\u066c,]/g, "");
+}
+
+/** Parses a user-typed number; returns NaN for anything that is not one. */
+export function parseNum(v: string): number {
+  const clean = normalizeDigits(String(v).trim());
+  if (clean === "") return 0;
+  const n = Number(clean);
+  return Number.isFinite(n) ? n : NaN;
 }
 
 /* ------------------------------------------------------------------ *
@@ -91,8 +115,9 @@ export const ROUND_MODES: { v: RoundMode; label: string }[] = [
 export function roundPrice(n: number, mode: RoundMode): number {
   if (mode === "none") return Math.round(n * 100) / 100;
   const step = Number(mode);
-  if (!step || step <= 0) return n;
-  return Math.round(n / step) * step;
+  if (!step || step <= 0) return Math.round(n * 100) / 100;
+  // Re-round to 2 decimals: dividing by 0.01 reintroduces binary float dust.
+  return Math.round((Math.round(n / step) * step + Number.EPSILON) * 100) / 100;
 }
 
 export type BulkPriceInput = {

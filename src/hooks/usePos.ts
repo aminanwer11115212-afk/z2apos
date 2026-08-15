@@ -4,11 +4,18 @@ import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useMyRole } from "@/lib/auth";
 import { useSettings, encodeNotes, computeTax } from "@/lib/settings";
-import { type PaymentMethod } from "@/lib/payments";
-import { PosPart, PosLine } from "@/lib/pos";
+import {
+  defaultAccountIdFor,
+  initialPaymentMethod,
+  isDigitalMethod,
+  requiresRef,
+  type PaymentMethod,
+} from "@/lib/payments";
+import { PosPart, PosLine, POS_PART_SELECT } from "@/lib/pos";
 import { unitPriceFor, type PriceMode } from "@/lib/parts";
 import { usePosCustomerDialog } from "@/components/PosCustomerDialog";
 import { usePosHeld } from "./usePosHeld";
+import { dbErrorMessage } from "@/lib/db-errors";
 import { toast } from "sonner";
 
 export function usePos() {
@@ -22,23 +29,14 @@ export function usePos() {
   const maxDiscPct = isSeller ? perms.maxDiscountPercent : 100;
 
   const digitalAccounts = useMemo(
-    () => settings.accounts.filter((a) => a.type === "bank" || a.type === "wallet"),
+    () => settings.accounts.filter((a) => a.type !== "cash"),
     [settings.accounts],
   );
   const cashAccount = useMemo(
     () => settings.accounts.find((a) => a.type === "cash") ?? settings.accounts[0],
     [settings.accounts],
   );
-  const enabledMethods = useMemo(
-    () =>
-      (Object.keys(settings.paymentMethods) as PaymentMethod[]).filter(
-        (k) => settings.paymentMethods[k]?.enabled,
-      ),
-    [settings.paymentMethods],
-  );
-  const initialMethod: PaymentMethod = enabledMethods.includes(settings.defaultMethod)
-    ? settings.defaultMethod
-    : (enabledMethods[0] ?? "cash");
+  const initialMethod = initialPaymentMethod(settings);
 
   const [q, setQ] = useState("");
   const [lines, setLines] = useState<PosLine[]>([]);
@@ -47,8 +45,8 @@ export function usePos() {
   const [priceMode, setPriceMode] = useState<PriceMode>("retail");
   const [customerId, setCustomerId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(initialMethod);
-  const [bankAccountId, setBankAccountId] = useState(
-    settings.paymentMethods[paymentMethod]?.defaultAccountId || digitalAccounts[0]?.id || "",
+  const [bankAccountId, setBankAccountId] = useState(() =>
+    defaultAccountIdFor(settings, initialMethod),
   );
   const [txRef, setTxRef] = useState("");
   const [discount, setDiscount] = useState(0);
@@ -86,18 +84,13 @@ export function usePos() {
   // default, matching PaymentDialog and the standalone payment page.
   const selectPaymentMethod = (m: PaymentMethod) => {
     setPaymentMethod(m);
-    const preferred = settings.paymentMethods[m]?.defaultAccountId;
-    const pool = m === "cash" ? (cashAccount ? [cashAccount] : []) : digitalAccounts;
-    setBankAccountId(pool.some((a) => a.id === preferred) ? preferred! : (pool[0]?.id ?? ""));
+    setBankAccountId(defaultAccountIdFor(settings, m));
   };
 
   const { data: parts = [] } = useQuery({
     queryKey: ["parts-lite"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("parts")
-        .select("id,code,name,sell_price,wholesale_price,quantity")
-        .order("name");
+      const { data, error } = await supabase.from("parts").select(POS_PART_SELECT).order("name");
       if (error) throw error;
       return data as PosPart[];
     },
@@ -173,18 +166,29 @@ export function usePos() {
     setCustomerId("");
     setTxRef("");
   };
-  const isDigital = paymentMethod === "bank" || paymentMethod === "wallet";
+  const isDigital = isDigitalMethod(paymentMethod);
 
   const save = useMutation({
     mutationFn: async () => {
       if (lines.length === 0) throw new Error("لا توجد أصناف");
+      // Re-read stock at save time: the cached list can be minutes old, and a
+      // second till may have sold the same part in the meantime.
+      const { data: fresh, error: stockErr } = await supabase
+        .from("parts")
+        .select("id,name,quantity")
+        .in(
+          "id",
+          lines.map((l) => l.part.id),
+        );
+      if (stockErr) throw new Error(dbErrorMessage(stockErr, "تعذّر التحقق من المخزون"));
+      const stock = new Map((fresh ?? []).map((p) => [p.id, Number(p.quantity)]));
       for (const l of lines) {
-        const avail = Number(l.part.quantity);
+        const avail = stock.get(l.part.id) ?? 0;
         if (l.qty > avail)
           throw new Error(`الكمية المطلوبة من ${l.part.name} (${l.qty}) تتجاوز المتاح (${avail})`);
       }
-      const cfg = settings.paymentMethods[paymentMethod as "cash" | "bank" | "wallet"];
-      if (cfg?.requireRef && isDigital && !txRef.trim()) throw new Error("رقم العملية مطلوب");
+      if (requiresRef(settings, paymentMethod) && !txRef.trim())
+        throw new Error("رقم العملية مطلوب");
       const { data: userRes } = await supabase.auth.getUser();
       const uid = userRes.user?.id;
       if (!uid) throw new Error("يجب تسجيل الدخول");
@@ -207,7 +211,7 @@ export function usePos() {
         })
         .select("id, invoice_no")
         .single();
-      if (e1) throw e1;
+      if (e1) throw new Error(dbErrorMessage(e1, "تعذّر حفظ الفاتورة"));
       const items = lines.map((l) => ({
         sale_id: sale.id,
         part_id: l.part.id,
@@ -215,7 +219,7 @@ export function usePos() {
         unit_price: l.unit_price,
       }));
       const { error: e2 } = await supabase.from("sale_items").insert(items);
-      if (e2) throw e2;
+      if (e2) throw new Error(dbErrorMessage(e2, "تعذّر حفظ أصناف الفاتورة"));
       return sale;
     },
     onSuccess: (sale) => {

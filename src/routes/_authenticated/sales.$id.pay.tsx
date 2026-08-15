@@ -4,7 +4,16 @@ import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
 import { useSettings, saleTotals } from "@/lib/settings";
-import { PaymentMethod } from "@/lib/payments";
+import {
+  PAYMENT_META,
+  accountsForMethod,
+  defaultAccountIdFor,
+  enabledPaymentMethods,
+  initialPaymentMethod,
+  isDigitalMethod,
+  requiresRef,
+  type PaymentMethod,
+} from "@/lib/payments";
 import { Btn, PageHeader, Field, Input } from "@/components/ui-kit";
 import { ArrowRight, Wallet } from "lucide-react";
 import { toast } from "sonner";
@@ -14,13 +23,6 @@ export const Route = createFileRoute("/_authenticated/sales/$id/pay")({
   component: InvoicePaymentPage,
 });
 
-const meta: Record<PaymentMethod, { icon: string; label: string }> = {
-  cash: { icon: "💵", label: "نقدي" },
-  bank: { icon: "🏦", label: "بنكي" },
-  wallet: { icon: "📱", label: "محفظة" },
-  transfer: { icon: "🔁", label: "تحويل" },
-  credit: { icon: "📝", label: "آجل" },
-};
 type Sale = {
   id: string;
   invoice_no: number;
@@ -44,22 +46,12 @@ function InvoicePaymentPage() {
 
   // Only offer methods the admin enabled in settings, and fall back sensibly when
   // the configured default itself is disabled.
-  const methods = useMemo(
-    () =>
-      (Object.keys(settings.paymentMethods) as PaymentMethod[]).filter(
-        (k) => settings.paymentMethods[k]?.enabled,
-      ),
-    [settings.paymentMethods],
-  );
-  const initialMethod: PaymentMethod = methods.includes(settings.defaultMethod)
-    ? settings.defaultMethod
-    : (methods[0] ?? "cash");
+  const methods = useMemo(() => enabledPaymentMethods(settings), [settings]);
+  const initialMethod = initialPaymentMethod(settings);
 
   const [amount, setAmount] = useState(0);
   const [method, setMethod] = useState<PaymentMethod>(initialMethod);
-  const [accountId, setAccountId] = useState(
-    settings.paymentMethods[initialMethod]?.defaultAccountId || "",
-  );
+  const [accountId, setAccountId] = useState(() => defaultAccountIdFor(settings, initialMethod));
   const [txRef, setTxRef] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -81,21 +73,15 @@ function InvoicePaymentPage() {
 
   const grand = sale ? saleTotals(sale).grand : 0;
   const due = sale ? Math.max(0, grand - Number(sale.paid)) : 0;
-  const isDigital = method === "bank" || method === "wallet";
-  const accountsFor = (m: PaymentMethod) =>
-    accounts.filter((a) =>
-      m === "cash" ? a.type === "cash" : a.type === "bank" || a.type === "wallet",
-    );
-  const eligible = useMemo(() => accountsFor(method), [accounts, method]); // eslint-disable-line react-hooks/exhaustive-deps
+  const isDigital = isDigitalMethod(method);
+  const eligible = useMemo(() => accountsForMethod(settings, method), [settings, method]);
   const acc = accounts.find((a) => a.id === accountId);
 
   // Point the account at the new method's configured default, falling back to the
   // first account that method can actually use.
   const selectMethod = (m: PaymentMethod) => {
     setMethod(m);
-    const pool = accountsFor(m);
-    const preferred = settings.paymentMethods[m]?.defaultAccountId;
-    setAccountId(pool.some((a) => a.id === preferred) ? preferred! : (pool[0]?.id ?? ""));
+    setAccountId(defaultAccountIdFor(settings, m));
   };
 
   const save = useMutation({
@@ -103,8 +89,7 @@ function InvoicePaymentPage() {
       if (!sale) throw new Error("الفاتورة غير موجودة");
       if (!(amount > 0)) throw new Error("أدخل مبلغاً صحيحاً");
       if (amount > due) throw new Error(`المبلغ يتجاوز المتبقي: ${formatSDG(due)}`);
-      const cfg = settings.paymentMethods[method];
-      if (cfg?.requireRef && isDigital && !txRef.trim()) throw new Error("رقم العملية مطلوب");
+      if (requiresRef(settings, method) && !txRef.trim()) throw new Error("رقم العملية مطلوب");
       const { data: userRes } = await supabase.auth.getUser();
       const note =
         [txRef.trim() ? `مرجع: ${txRef.trim()}` : "", notes.trim()].filter(Boolean).join(" · ") ||
@@ -186,7 +171,7 @@ function InvoicePaymentPage() {
                 onClick={() => selectMethod(m)}
                 className={`h-10 rounded-lg border text-sm font-medium ${method === m ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
               >
-                {meta[m].icon} {meta[m].label}
+                {PAYMENT_META[m].icon} {PAYMENT_META[m].label}
               </button>
             ))}
           </div>

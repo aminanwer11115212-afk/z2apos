@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMyRole } from "@/lib/auth";
-import { PART_SELECT, autoPartCode, type Part } from "@/lib/parts";
+import { PART_SELECT, autoPartCode, parseNum, type Part } from "@/lib/parts";
+import { dbErrorMessage } from "@/lib/db-errors";
 import {
   PartsGrid,
   GridErrorList,
@@ -94,11 +95,6 @@ function toRow(p: Part): GridRow {
   };
   return { key: p.id, id: p.id, code: p.code, values, base: { ...values }, removed: false };
 }
-
-const num = (v: string) => {
-  const n = Number(String(v).trim().replace(/,/g, ""));
-  return Number.isFinite(n) ? n : NaN;
-};
 
 /** A row counts as "filled" once anything was typed into it. */
 const isTouched = (r: GridRow) => Object.values(r.values).some((v) => v.trim() !== "");
@@ -211,8 +207,17 @@ function BulkPartsPage() {
   /* ---------------- focus / keyboard navigation ---------------- */
 
   const focusCell = useCallback((r: number, c: number) => {
-    const el = gridRef.current?.querySelector<HTMLInputElement>(`[data-cell="${r}-${c}"]`);
-    if (!el) return;
+    const grid = gridRef.current;
+    if (!grid) return;
+    let el = grid.querySelector<HTMLInputElement>(`[data-cell="${r}-${c}"]`);
+    if (!el) {
+      // The requested row may not exist on a short last page — fall back to the
+      // last row in that column instead of dropping focus out of the grid.
+      const inCol = grid.querySelectorAll<HTMLInputElement>(`[data-cell$="-${c}"]`);
+      el = inCol[inCol.length - 1] ?? null;
+      if (!el) return;
+      r = Number(el.dataset.cell!.split("-")[0]);
+    }
     el.focus();
     el.select();
     cursor.current = { r, c };
@@ -272,7 +277,14 @@ function BulkPartsPage() {
     onChange(visible[r].key, col, value);
   };
 
-  const onCellKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, r: number, c: number) => {
+  const cellKeyRef = useRef<
+    (e: React.KeyboardEvent<HTMLInputElement>, r: number, c: number) => void
+  >(() => {});
+  const onCellKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>, r: number, c: number) => cellKeyRef.current(e, r, c),
+    [],
+  );
+  cellKeyRef.current = (e: React.KeyboardEvent<HTMLInputElement>, r: number, c: number) => {
     const el = e.currentTarget;
     const col = COLS[c];
     const move = (dr: number, dc: number) => {
@@ -288,10 +300,7 @@ function BulkPartsPage() {
       e.preventDefault();
       return copyFromAbove(r, c, e.shiftKey);
     }
-    if (e.code === "KeyS" && e.ctrlKey) {
-      e.preventDefault();
-      return saveRef.current();
-    }
+    // Ctrl+S is handled once, by the window listener below.
     switch (e.key) {
       case "ArrowDown":
         return move(1, 0);
@@ -385,9 +394,9 @@ function BulkPartsPage() {
       .map((r) => ({
         key: r.key,
         name: r.values.name,
-        cost_price: num(r.values.cost_price) || 0,
-        sell_price: num(r.values.sell_price) || 0,
-        wholesale_price: num(r.values.wholesale_price) || 0,
+        cost_price: parseNum(r.values.cost_price) || 0,
+        sell_price: parseNum(r.values.sell_price) || 0,
+        wholesale_price: parseNum(r.values.wholesale_price) || 0,
       }));
   }, [mode, addRows, editRows, selected]);
 
@@ -407,7 +416,7 @@ function BulkPartsPage() {
       const bad = NUM_COLS.find((k) => {
         const raw = r.values[k].trim();
         if (raw === "") return false;
-        const n = num(raw);
+        const n = parseNum(raw);
         return Number.isNaN(n) || n < 0;
       });
       if (bad) map.set(r.key, "أرقام غير صالحة (لا تُقبل القيم السالبة أو النصوص)");
@@ -426,11 +435,11 @@ function BulkPartsPage() {
     name: r.values.name.trim(),
     category: r.values.category.trim() || null,
     car_model: r.values.car_model.trim() || null,
-    cost_price: num(r.values.cost_price) || 0,
-    sell_price: num(r.values.sell_price) || 0,
-    wholesale_price: num(r.values.wholesale_price) || 0,
-    quantity: num(r.values.quantity) || 0,
-    min_quantity: num(r.values.min_quantity) || 0,
+    cost_price: parseNum(r.values.cost_price) || 0,
+    sell_price: parseNum(r.values.sell_price) || 0,
+    wholesale_price: parseNum(r.values.wholesale_price) || 0,
+    quantity: parseNum(r.values.quantity) || 0,
+    min_quantity: parseNum(r.values.min_quantity) || 0,
   });
 
   const save = useMutation({
@@ -442,7 +451,7 @@ function BulkPartsPage() {
         const payload = rows.map((r) => ({ ...payloadOf(r), code: autoPartCode() }));
         for (let i = 0; i < payload.length; i += 200) {
           const { error } = await supabase.from("parts").insert(payload.slice(i, i + 200));
-          if (error) throw error;
+          if (error) throw new Error(dbErrorMessage(error, "تعذّرت إضافة الأصناف"));
         }
         return { added: payload.length, updated: 0, deleted: 0 };
       }
@@ -454,14 +463,17 @@ function BulkPartsPage() {
       const payload = changed.map((r) => ({ id: r.id!, code: r.code, ...payloadOf(r) }));
       for (let i = 0; i < payload.length; i += 200) {
         const { error } = await supabase.from("parts").upsert(payload.slice(i, i + 200));
-        if (error) throw error;
+        if (error) throw new Error(dbErrorMessage(error, "تعذّر حفظ التعديلات"));
       }
       for (let i = 0; i < dropped.length; i += 200) {
         const { error } = await supabase
           .from("parts")
           .delete()
           .in("id", dropped.slice(i, i + 200));
-        if (error) throw error;
+        if (error)
+          throw new Error(
+            dbErrorMessage(error, "تعذّر حذف الأصناف — قد تكون مرتبطة بفواتير سابقة"),
+          );
       }
       return { added: 0, updated: changed.length, deleted: dropped.length };
     },
@@ -520,7 +532,7 @@ function BulkPartsPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  if (role && !isAdmin)
+  if (role !== undefined && !isAdmin)
     return <div className="p-6 text-center text-muted-foreground">هذه الصفحة للمديرين فقط</div>;
 
   return (
@@ -690,7 +702,7 @@ function BulkPartsPage() {
       )}
 
       {/* Sticky save bar — the grid is long, the action must always be reachable. */}
-      <div className="fixed bottom-0 inset-x-0 lg:right-64 z-20 border-t bg-card/95 backdrop-blur px-4 py-3 flex items-center justify-between gap-3">
+      <div className="fixed bottom-0 inset-x-0 lg:right-60 z-20 border-t bg-card/95 backdrop-blur px-4 py-3 flex items-center justify-between gap-3">
         <div className="text-sm">
           {dirtyCount > 0 ? (
             <span className="font-medium">
