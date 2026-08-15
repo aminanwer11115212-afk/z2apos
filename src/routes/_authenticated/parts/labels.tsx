@@ -13,7 +13,9 @@ export const Route = createFileRoute("/_authenticated/parts/labels")({
   component: LabelsPage,
 });
 
-type Part = { id: string; code: string; name: string; sell_price: number };
+import type { Part as FullPart } from "@/lib/parts";
+
+type Part = Pick<FullPart, "id" | "code" | "name" | "sell_price">;
 
 function LabelsPage() {
   const settings = useSettings();

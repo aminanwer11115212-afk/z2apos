@@ -74,7 +74,9 @@ export function PartsGrid(props: Props) {
 
   return (
     <div className="bg-card border rounded-2xl overflow-hidden">
-      <div className="overflow-x-auto">
+      {/* Own scroll box so the sticky header actually sticks (a page-level
+          scroll would slide it under the app bar) and long pages stay usable. */}
+      <div className="overflow-auto max-h-[65vh]">
         <table className="w-full text-sm border-collapse" style={{ minWidth: 900 }}>
           <thead className="bg-muted text-muted-foreground sticky top-0 z-10">
             <tr>

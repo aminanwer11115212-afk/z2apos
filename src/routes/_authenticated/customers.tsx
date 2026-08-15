@@ -16,6 +16,7 @@ import {
 } from "@/components/ui-kit";
 import { PaymentDialog } from "@/components/PaymentDialog";
 import { Plus, Pencil, Trash2, Wallet, MessageCircle } from "lucide-react";
+import { dbErrorMessage } from "@/lib/db-errors";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/customers")({
@@ -69,7 +70,7 @@ function CustomersPage() {
   const del = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("customers").delete().eq("id", id);
-      if (error) throw error;
+      if (error) throw new Error(dbErrorMessage(error, "تعذّر حذف العميل"));
     },
     onSuccess: () => {
       toast.success("تم الحذف");

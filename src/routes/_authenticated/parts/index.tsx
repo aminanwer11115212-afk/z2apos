@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMyRole, formatSDG } from "@/lib/auth";
 import { useSettings, isLowStock } from "@/lib/settings";
 import { PART_SELECT, autoPartCode, type Part } from "@/lib/parts";
+import { dbErrorMessage } from "@/lib/db-errors";
 import {
   Modal,
   Field,
@@ -86,7 +87,8 @@ function PartsPage() {
   const del = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("parts").delete().eq("id", id);
-      if (error) throw error;
+      if (error)
+        throw new Error(dbErrorMessage(error, "تعذّر حذف الصنف — قد يكون مرتبطاً بفواتير"));
     },
     onSuccess: () => {
       toast.success("تم الحذف");

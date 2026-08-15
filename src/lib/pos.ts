@@ -1,14 +1,12 @@
 import { type PaymentMethod } from "@/lib/payments";
-import type { PriceMode } from "@/lib/parts";
+import type { Part, PriceMode } from "@/lib/parts";
 
-export type PosPart = {
-  id: string;
-  code: string;
-  name: string;
-  sell_price: number;
-  wholesale_price: number;
-  quantity: number;
-};
+/** The columns the POS actually selects — kept in step with `Part` by Pick. */
+export type PosPart = Pick<
+  Part,
+  "id" | "code" | "name" | "sell_price" | "wholesale_price" | "quantity"
+>;
+export const POS_PART_SELECT = "id,code,name,sell_price,wholesale_price,quantity";
 export type PosLine = { part: PosPart; qty: number; unit_price: number };
 
 export type HeldSale = {
@@ -38,10 +36,3 @@ export const loadHeld = (): HeldSale[] => {
 export const saveHeld = (list: HeldSale[]) => {
   localStorage.setItem(HOLD_KEY, JSON.stringify(list));
 };
-
-export const formatSDG = (n: number) =>
-  new Intl.NumberFormat("ar-SD", {
-    style: "currency",
-    currency: "SDG",
-    maximumFractionDigits: 2,
-  }).format(n);

@@ -3,6 +3,15 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Modal, Field, Input, Btn } from "@/components/ui-kit";
 import { useSettings, type PaymentMethodKey } from "@/lib/settings";
+import {
+  PAYMENT_META,
+  accountsForMethod,
+  defaultAccountIdFor,
+  enabledPaymentMethods,
+  initialPaymentMethod,
+  isDigitalMethod,
+  requiresRef,
+} from "@/lib/payments";
 import { formatSDG } from "@/lib/auth";
 import { toast } from "sonner";
 
@@ -14,12 +23,6 @@ type Props = {
   saleId?: string;
   purchaseId?: string;
   suggested?: number;
-};
-
-const METHOD_META: Partial<Record<PaymentMethodKey, { label: string; icon: string }>> = {
-  cash: { label: "نقدي", icon: "💵" },
-  bank: { label: "بنكي", icon: "🏦" },
-  wallet: { label: "محفظة", icon: "📱" },
 };
 
 export function PaymentDialog({
@@ -34,18 +37,12 @@ export function PaymentDialog({
   const qc = useQueryClient();
   const settings = useSettings();
 
-  const enabledMethods = (Object.keys(settings.paymentMethods) as PaymentMethodKey[]).filter(
-    (k) => settings.paymentMethods[k]?.enabled,
-  );
-  const initialMethod: PaymentMethodKey = enabledMethods.includes(settings.defaultMethod)
-    ? settings.defaultMethod
-    : (enabledMethods[0] ?? "cash");
+  const enabledMethods = enabledPaymentMethods(settings);
+  const initialMethod = initialPaymentMethod(settings);
 
   const [amount, setAmount] = useState<number>(0);
   const [method, setMethod] = useState<PaymentMethodKey>(initialMethod);
-  const [accountId, setAccountId] = useState(
-    settings.paymentMethods[initialMethod]?.defaultAccountId ?? "",
-  );
+  const [accountId, setAccountId] = useState(() => defaultAccountIdFor(settings, initialMethod));
   const [txRef, setTxRef] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -53,21 +50,20 @@ export function PaymentDialog({
     if (open) {
       setAmount(suggested ?? Math.max(0, Number(party.balance) || 0));
       setMethod(initialMethod);
-      setAccountId(settings.paymentMethods[initialMethod]?.defaultAccountId ?? "");
+      setAccountId(defaultAccountIdFor(settings, initialMethod));
       setTxRef("");
       setNotes("");
     }
-  }, [open, suggested, party.balance, initialMethod, settings.paymentMethods]);
+  }, [open, suggested, party.balance, initialMethod, settings]);
 
   useEffect(() => {
     if (!open) return;
-    setAccountId(settings.paymentMethods[method]?.defaultAccountId ?? "");
-  }, [method, open, settings.paymentMethods]);
+    setAccountId(defaultAccountIdFor(settings, method));
+  }, [method, open, settings]);
 
-  const cfg = settings.paymentMethods[method];
   const acc = settings.accounts.find((a) => a.id === accountId);
-  const isDigital = method === "bank" || method === "wallet";
-  const requireRef = isDigital && !!cfg?.requireRef;
+  const isDigital = isDigitalMethod(method);
+  const requireRef = requiresRef(settings, method);
 
   const projectedBalance = Number(party.balance) - amount;
 
@@ -168,7 +164,7 @@ export function PaymentDialog({
                 onClick={() => setMethod(m)}
                 className={`h-10 rounded-lg border text-sm font-medium ${method === m ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
               >
-                {METHOD_META[m]?.icon} {METHOD_META[m]?.label}
+                {PAYMENT_META[m].icon} {PAYMENT_META[m].label}
               </button>
             ))}
           </div>
@@ -180,15 +176,11 @@ export function PaymentDialog({
             onChange={(e) => setAccountId(e.target.value)}
             className="w-full h-11 px-3 rounded-lg border bg-background"
           >
-            {settings.accounts
-              .filter((a) =>
-                method === "cash" ? a.type === "cash" : a.type === "bank" || a.type === "wallet",
-              )
-              .map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.type === "cash" ? "💵" : a.type === "wallet" ? "📱" : "🏦"} {a.name}
-                </option>
-              ))}
+            {accountsForMethod(settings, method).map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.type === "cash" ? "💵" : a.type === "wallet" ? "📱" : "🏦"} {a.name}
+              </option>
+            ))}
           </select>
         </Field>
 

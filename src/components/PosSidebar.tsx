@@ -1,7 +1,12 @@
 import { Field, Btn } from "@/components/ui-kit";
 import { formatSDG } from "@/lib/auth";
 import { computeTax, Settings, Account } from "@/lib/settings";
-import { PaymentMethod } from "@/lib/payments";
+import {
+  PAYMENT_META,
+  enabledPaymentMethods,
+  isDigitalMethod,
+  type PaymentMethod,
+} from "@/lib/payments";
 import { UserPlus, CheckCircle2, Pause } from "lucide-react";
 import { useMemo } from "react";
 
@@ -37,14 +42,6 @@ type PosSidebarProps = {
   methodRef: React.RefObject<HTMLButtonElement | null>;
 };
 
-const methodMeta: Record<PaymentMethod, { icon: string; label: string }> = {
-  cash: { icon: "💵", label: "نقدي" },
-  bank: { icon: "🏦", label: "بنكي" },
-  wallet: { icon: "📱", label: "محفظة" },
-  transfer: { icon: "🔁", label: "تحويل" },
-  credit: { icon: "📝", label: "آجل" },
-};
-
 export function PosSidebar(props: PosSidebarProps) {
   const {
     customers,
@@ -78,22 +75,13 @@ export function PosSidebar(props: PosSidebarProps) {
     methodRef,
   } = props;
 
-  const isDigital = paymentMethod === "bank" || paymentMethod === "wallet";
-  const digitalAccounts = useMemo(
-    () => accounts.filter((a) => a.type === "bank" || a.type === "wallet"),
-    [accounts],
-  );
+  const isDigital = isDigitalMethod(paymentMethod);
+  const digitalAccounts = useMemo(() => accounts.filter((a) => a.type !== "cash"), [accounts]);
   const cashAccount = useMemo(
     () => accounts.find((a) => a.type === "cash") ?? accounts[0],
     [accounts],
   );
-  const enabledMethods = useMemo(
-    () =>
-      (Object.keys(settings.paymentMethods) as PaymentMethod[]).filter(
-        (k) => settings.paymentMethods[k]?.enabled,
-      ),
-    [settings.paymentMethods],
-  );
+  const enabledMethods = useMemo(() => enabledPaymentMethods(settings), [settings]);
   const maxDiscPct = isSeller ? settings.sellerPerms.maxDiscountPercent : 100;
   const maxDiscount = total * (maxDiscPct / 100);
   const effectiveDiscount = Math.min(discount, maxDiscount);
@@ -138,7 +126,7 @@ export function PosSidebar(props: PosSidebarProps) {
           }}
         >
           {enabledMethods.map((m, i) => {
-            const meta = methodMeta[m];
+            const meta = PAYMENT_META[m];
             return (
               <button
                 key={m}

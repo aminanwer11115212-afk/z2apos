@@ -3,7 +3,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Modal, Field, Input, Btn } from "@/components/ui-kit";
 import { useSettings, parseNotes, encodeNotes } from "@/lib/settings";
-import { PaymentMethod } from "@/lib/payments";
+import {
+  PAYMENT_META,
+  accountsForMethod,
+  isDigitalMethod,
+  type PaymentMethod,
+} from "@/lib/payments";
 import { toast } from "sonner";
 
 type Kind = "sale" | "purchase";
@@ -22,14 +27,6 @@ type Props = {
     account_name: string | null;
     notes: string | null;
   };
-};
-
-const METHOD_META: Record<PaymentMethod, { icon: string; label: string }> = {
-  cash: { icon: "💵", label: "نقدي" },
-  bank: { icon: "🏦", label: "بنكي" },
-  wallet: { icon: "📱", label: "محفظة" },
-  transfer: { icon: "🔁", label: "تحويل" },
-  credit: { icon: "📝", label: "آجل" },
 };
 
 export function EditInvoiceDialog({ open, onClose, kind, invoice }: Props) {
@@ -68,9 +65,9 @@ export function EditInvoiceDialog({ open, onClose, kind, invoice }: Props) {
     parsed.text,
   ]);
 
-  const digitalAccounts = settings.accounts.filter((a) => a.type === "bank" || a.type === "wallet");
+  const digitalAccounts = accountsForMethod(settings, "bank");
   const cashAccount = settings.accounts.find((a) => a.type === "cash") ?? settings.accounts[0];
-  const isDigital = method === "bank" || method === "wallet";
+  const isDigital = isDigitalMethod(method);
 
   const total = Number(invoice.total);
   const net = kind === "sale" ? total - discount : total;
@@ -185,7 +182,7 @@ export function EditInvoiceDialog({ open, onClose, kind, invoice }: Props) {
                 onClick={() => setMethod(m)}
                 className={`h-10 rounded-lg border text-sm font-medium ${method === m ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
               >
-                {METHOD_META[m].icon} {METHOD_META[m].label}
+                {PAYMENT_META[m].icon} {PAYMENT_META[m].label}
               </button>
             ))}
           </div>

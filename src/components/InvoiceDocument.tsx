@@ -36,6 +36,7 @@ export function InvoiceDocument({
     ? 0
     : Math.max(0, Number(settings.invoiceMinRows || 0) - doc.items.length);
   const cols = 4 + (showCode ? 1 : 0);
+  const cell = thermal ? "p-1" : "p-2";
 
   return (
     <div
@@ -69,57 +70,75 @@ export function InvoiceDocument({
         {settings.showLogo && !thermal && <Logo variant="light" className="h-16 w-auto" />}
       </div>
 
-      {/* ---- Meta line: date · invoice no · customer ---- */}
+      {/* ---- Meta line: date · invoice no · customer ----
+           A roll is too narrow for three fields side by side, so thermal
+           stacks them; A4 keeps the single ruled line of the paper template. */}
       <div
-        className={`mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-2 ${
-          thermal ? "text-[11px]" : "text-base"
+        className={`mt-4 gap-x-6 gap-y-1.5 ${
+          thermal ? "grid grid-cols-1 text-[11px]" : "flex flex-wrap items-end text-base"
         }`}
       >
         <MetaField
           label="التاريخ"
           value={formatInvoiceDate(doc.date)}
-          width={thermal ? "" : "w-44"}
+          width={thermal ? "" : "w-52 shrink-0"}
+          nowrap
         />
         <MetaField
           label="رقم الفاتورة"
           value={doc.invoiceLabel}
-          width={thermal ? "" : "w-36"}
+          width={thermal ? "" : "w-44 shrink-0"}
           mono
+          nowrap
         />
         <MetaField
           label="اسم العميل"
           value={doc.customerName || "نقدي"}
-          width={thermal ? "flex-1" : "flex-1 min-w-48"}
+          width={thermal ? "" : "flex-1 min-w-48"}
         />
       </div>
 
       {/* ---- Items ---- */}
-      <table className="w-full invoice-table mt-3" style={{ borderCollapse: "collapse" }}>
+      <table
+        className={`w-full invoice-table mt-3 ${thermal ? "text-[10px]" : ""}`}
+        style={{ borderCollapse: "collapse", tableLayout: thermal ? "auto" : undefined }}
+      >
         <thead>
           <tr className="bg-muted">
-            <th className="border p-2 text-center font-bold w-10">م</th>
-            <th className="border p-2 text-center font-bold">الصنف</th>
+            <th className={`border text-center font-bold ${thermal ? "p-1 w-5" : "p-2 w-10"}`}>
+              م
+            </th>
+            <th className={`border text-center font-bold ${thermal ? "p-1" : "p-2"}`}>الصنف</th>
             {showCode && <th className="border p-2 text-center font-bold w-24">الكود</th>}
-            <th className="border p-2 text-center font-bold w-32">السعر (وحدة)</th>
-            <th className="border p-2 text-center font-bold w-16">الكمية</th>
-            <th className="border p-2 text-center font-bold w-32">الإجمالي</th>
+            <th className={`border text-center font-bold ${thermal ? "p-1" : "p-2 w-32"}`}>
+              السعر {thermal ? "" : "(وحدة)"}
+            </th>
+            <th className={`border text-center font-bold ${thermal ? "p-1 w-8" : "p-2 w-16"}`}>
+              الكمية
+            </th>
+            <th className={`border text-center font-bold ${thermal ? "p-1" : "p-2 w-32"}`}>
+              الإجمالي
+            </th>
           </tr>
         </thead>
         <tbody>
           {doc.items.map((it, i) => (
             <tr key={it.id}>
-              <td className="border p-2 text-center font-mono">{i + 1}</td>
-              <td className="border p-2 text-right">{it.name}</td>
+              <td className={`border text-center font-mono ${cell}`}>{i + 1}</td>
+              <td className={`border text-right ${cell}`}>{it.name}</td>
               {showCode && (
                 <td className="border p-2 text-center font-mono text-xs muted-print text-muted-foreground">
                   {it.code || "—"}
                 </td>
               )}
-              <td className="border p-2 text-center font-mono" dir="ltr">
+              <td className={`border text-center font-mono whitespace-nowrap ${cell}`} dir="ltr">
                 {formatAmount(it.unit_price)}
               </td>
-              <td className="border p-2 text-center font-mono">{formatQty(it.qty)}</td>
-              <td className="border p-2 text-center font-mono font-semibold" dir="ltr">
+              <td className={`border text-center font-mono ${cell}`}>{formatQty(it.qty)}</td>
+              <td
+                className={`border text-center font-mono font-semibold whitespace-nowrap ${cell}`}
+                dir="ltr"
+              >
                 {formatAmount(it.subtotal)}
               </td>
             </tr>
@@ -127,7 +146,9 @@ export function InvoiceDocument({
           {/* Blank rows so a short A4 invoice still fills the ruled table. */}
           {Array.from({ length: fillers }, (_, i) => (
             <tr key={`f${i}`} className="filler-row">
-              <td className="border p-2 text-center font-mono muted-print text-muted-foreground">
+              <td
+                className={`border text-center font-mono muted-print text-muted-foreground ${cell}`}
+              >
                 {doc.items.length + i + 1}
               </td>
               <td className="border p-2">&nbsp;</td>
@@ -140,10 +161,13 @@ export function InvoiceDocument({
         </tbody>
         <tfoot>
           <tr className="bg-muted">
-            <td className="border p-2 text-center font-bold" colSpan={cols}>
+            <td className={`border text-center font-bold ${cell}`} colSpan={cols}>
               الإجمالي الكلي
             </td>
-            <td className="border p-2 text-center font-extrabold font-mono" dir="ltr">
+            <td
+              className={`border text-center font-extrabold font-mono whitespace-nowrap ${cell}`}
+              dir="ltr"
+            >
               {formatAmount(doc.grand)}
             </td>
           </tr>
@@ -218,11 +242,13 @@ function MetaField({
   value,
   width = "",
   mono,
+  nowrap,
 }: {
   label: string;
   value: string;
   width?: string;
   mono?: boolean;
+  nowrap?: boolean;
 }) {
   return (
     <div className={`flex items-end gap-2 ${width}`}>
@@ -230,7 +256,7 @@ function MetaField({
       <span
         className={`flex-1 border-b border-dotted text-center pb-0.5 font-semibold ${
           mono ? "font-mono" : ""
-        }`}
+        } ${nowrap ? "whitespace-nowrap" : ""}`}
       >
         {value}
       </span>

@@ -4,7 +4,17 @@ import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSDG } from "@/lib/auth";
 import { useSettings } from "@/lib/settings";
-import { PaymentMethod, paymentMethodIcon } from "@/lib/payments";
+import type { Part as FullPart } from "@/lib/parts";
+import {
+  accountsForMethod,
+  defaultAccountIdFor,
+  enabledPaymentMethods,
+  initialPaymentMethod,
+  isDigitalMethod,
+  paymentMethodIcon,
+  paymentMethodLabel,
+  type PaymentMethod,
+} from "@/lib/payments";
 import { Field, Input, Btn, PageHeader, EmptyState } from "@/components/ui-kit";
 import { Plus, Minus, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -14,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/purchases")({
   component: PurchasesPage,
 });
 
-type Part = { id: string; code: string; name: string; cost_price: number };
+type Part = Pick<FullPart, "id" | "code" | "name" | "cost_price">;
 type Line = { part: Part; qty: number; unit_cost: number };
 
 type Purchase = {
@@ -117,36 +127,18 @@ function PurchasesPage() {
   );
 }
 
-const METHOD_LABEL: Record<PaymentMethod, string> = {
-  cash: "نقدي",
-  bank: "بنكي",
-  wallet: "محفظة",
-  transfer: "تحويل",
-  credit: "آجل",
-};
-
 function NewPurchase({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
   const settings = useSettings();
   // Respect the enabled/default payment methods configured in settings rather than
   // showing a fixed list.
-  const enabledMethods = useMemo(
-    () =>
-      (Object.keys(settings.paymentMethods) as PaymentMethod[]).filter(
-        (k) => settings.paymentMethods[k]?.enabled,
-      ),
-    [settings.paymentMethods],
-  );
-  const initialMethod: PaymentMethod = enabledMethods.includes(settings.defaultMethod)
-    ? settings.defaultMethod
-    : (enabledMethods[0] ?? "cash");
+  const enabledMethods = useMemo(() => enabledPaymentMethods(settings), [settings]);
+  const initialMethod = initialPaymentMethod(settings);
   const [q, setQ] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [supplierId, setSupplierId] = useState("");
   const [paid, setPaid] = useState(0);
   const [method, setMethod] = useState<PaymentMethod>(initialMethod);
-  const [accountId, setAccountId] = useState(
-    settings.paymentMethods[initialMethod]?.defaultAccountId ?? "",
-  );
+  const [accountId, setAccountId] = useState(() => defaultAccountIdFor(settings, initialMethod));
   const [txRef, setTxRef] = useState("");
   const [notes, setNotes] = useState("");
   const { data: parts = [] } = useQuery({
@@ -188,21 +180,15 @@ function NewPurchase({ onDone, onCancel }: { onDone: () => void; onCancel: () =>
     setQ("");
   };
   const total = lines.reduce((s, l) => s + l.qty * l.unit_cost, 0);
-  const isDigital = method === "bank" || method === "wallet";
+  const isDigital = isDigitalMethod(method);
   const account = settings.accounts.find((a) => a.id === accountId);
-  const accountsFor = (m: PaymentMethod) =>
-    m === "cash"
-      ? settings.accounts.filter((a) => a.type === "cash")
-      : settings.accounts.filter((a) => a.type === "bank" || a.type === "wallet");
-  const availableAccounts = accountsFor(method);
+  const availableAccounts = accountsForMethod(settings, method);
 
   // Keep the account in step with the method, falling back to the first account
   // that method can actually use when the configured default doesn't fit.
   const selectMethod = (m: PaymentMethod) => {
     setMethod(m);
-    const pool = accountsFor(m);
-    const preferred = settings.paymentMethods[m]?.defaultAccountId;
-    setAccountId(pool.some((a) => a.id === preferred) ? preferred! : (pool[0]?.id ?? ""));
+    setAccountId(defaultAccountIdFor(settings, m));
   };
   const save = useMutation({
     mutationFn: async () => {
@@ -401,7 +387,7 @@ function NewPurchase({ onDone, onCancel }: { onDone: () => void; onCancel: () =>
                   onClick={() => selectMethod(m)}
                   className={`h-10 rounded-lg border text-sm font-medium ${method === m ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
                 >
-                  {paymentMethodIcon(m)} {METHOD_LABEL[m]}
+                  {paymentMethodIcon(m)} {paymentMethodLabel(m)}
                 </button>
               ))}
             </div>
